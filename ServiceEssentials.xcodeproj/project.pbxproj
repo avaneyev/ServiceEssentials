@@ -1,0 +1,765 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		D55F421C1D1AF1A000B84D60 /* ServiceEssentials.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D5A420DC1D16ED5400471135 /* ServiceEssentials.framework */; };
+		D5A420E01D16ED5400471135 /* ServiceEssentials.h in Headers */ = {isa = PBXBuildFile; fileRef = D5A420DF1D16ED5400471135 /* ServiceEssentials.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D5A420F91D16EE4000471135 /* SEConstants.h in Headers */ = {isa = PBXBuildFile; fileRef = D5A420F71D16EE4000471135 /* SEConstants.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D5A420FA1D16EE4000471135 /* SEConstants.m in Sources */ = {isa = PBXBuildFile; fileRef = D5A420F81D16EE4000471135 /* SEConstants.m */; };
+		D5A421051D16EE9E00471135 /* NSArray+SEJSONExtensions.h in Headers */ = {isa = PBXBuildFile; fileRef = D5A420FC1D16EE9E00471135 /* NSArray+SEJSONExtensions.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D5A421061D16EE9E00471135 /* NSArray+JSONExtensions.m in Sources */ = {isa = PBXBuildFile; fileRef = D5A420FD1D16EE9E00471135 /* NSArray+JSONExtensions.m */; };
+		D5A421091D16EE9E00471135 /* NSDictionary+SEJSONExtensions.h in Headers */ = {isa = PBXBuildFile; fileRef = D5A421001D16EE9E00471135 /* NSDictionary+SEJSONExtensions.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D5A4210A1D16EE9E00471135 /* NSDictionary+SEJSONExtensions.m in Sources */ = {isa = PBXBuildFile; fileRef = D5A421011D16EE9E00471135 /* NSDictionary+SEJSONExtensions.m */; };
+		D5A4210B1D16EE9E00471135 /* NSString+SEExtensions.h in Headers */ = {isa = PBXBuildFile; fileRef = D5A421021D16EE9E00471135 /* NSString+SEExtensions.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D5A4210C1D16EE9E00471135 /* NSString+SEExtensions.m in Sources */ = {isa = PBXBuildFile; fileRef = D5A421031D16EE9E00471135 /* NSString+SEExtensions.m */; };
+		D5A4210D1D16EE9E00471135 /* SETools.h in Headers */ = {isa = PBXBuildFile; fileRef = D5A421041D16EE9E00471135 /* SETools.h */; };
+		D5A4213A1D16F0E600471135 /* SECancellableToken.h in Headers */ = {isa = PBXBuildFile; fileRef = D5A421101D16F0E600471135 /* SECancellableToken.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D5A4213B1D16F0E600471135 /* SECancellableTokenImpl.h in Headers */ = {isa = PBXBuildFile; fileRef = D5A421111D16F0E600471135 /* SECancellableTokenImpl.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D5A4213C1D16F0E600471135 /* SECancellableTokenImpl.m in Sources */ = {isa = PBXBuildFile; fileRef = D5A421121D16F0E600471135 /* SECancellableTokenImpl.m */; };
+		D5A4213D1D16F0E600471135 /* SEDataRequestJSONDeserializable.h in Headers */ = {isa = PBXBuildFile; fileRef = D5A421141D16F0E600471135 /* SEDataRequestJSONDeserializable.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D5A4213E1D16F0E600471135 /* SEDataRequestService.h in Headers */ = {isa = PBXBuildFile; fileRef = D5A421151D16F0E600471135 /* SEDataRequestService.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D5A4213F1D16F0E600471135 /* SEDataRequestServiceImpl.h in Headers */ = {isa = PBXBuildFile; fileRef = D5A421161D16F0E600471135 /* SEDataRequestServiceImpl.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D5A421401D16F0E600471135 /* SEDataRequestServiceImpl.m in Sources */ = {isa = PBXBuildFile; fileRef = D5A421171D16F0E600471135 /* SEDataRequestServiceImpl.m */; };
+		D5A421411D16F0E600471135 /* SEDataRequestServicePrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = D5A421181D16F0E600471135 /* SEDataRequestServicePrivate.h */; };
+		D5A421421D16F0E600471135 /* SEDataRequestServiceSecurityHelper.h in Headers */ = {isa = PBXBuildFile; fileRef = D5A421191D16F0E600471135 /* SEDataRequestServiceSecurityHelper.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D5A421431D16F0E600471135 /* SEDataRequestServiceSecurityHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = D5A4211A1D16F0E600471135 /* SEDataRequestServiceSecurityHelper.m */; };
+		D5A421441D16F0E600471135 /* SEInternalDataRequest.h in Headers */ = {isa = PBXBuildFile; fileRef = D5A4211B1D16F0E600471135 /* SEInternalDataRequest.h */; };
+		D5A421451D16F0E600471135 /* SEInternalDataRequest.m in Sources */ = {isa = PBXBuildFile; fileRef = D5A4211C1D16F0E600471135 /* SEInternalDataRequest.m */; };
+		D5A421461D16F0E600471135 /* SEInternalDataRequestBuilder.h in Headers */ = {isa = PBXBuildFile; fileRef = D5A4211D1D16F0E600471135 /* SEInternalDataRequestBuilder.h */; };
+		D5A421471D16F0E600471135 /* SEInternalDataRequestBuilder.m in Sources */ = {isa = PBXBuildFile; fileRef = D5A4211E1D16F0E600471135 /* SEInternalDataRequestBuilder.m */; };
+		D5A421481D16F0E600471135 /* SEMultipartRequestContentPart.h in Headers */ = {isa = PBXBuildFile; fileRef = D5A4211F1D16F0E600471135 /* SEMultipartRequestContentPart.h */; };
+		D5A421491D16F0E600471135 /* SEMultipartRequestContentPart.m in Sources */ = {isa = PBXBuildFile; fileRef = D5A421201D16F0E600471135 /* SEMultipartRequestContentPart.m */; };
+		D5A4214A1D16F0E600471135 /* SEMultipartRequestContentStream.h in Headers */ = {isa = PBXBuildFile; fileRef = D5A421211D16F0E600471135 /* SEMultipartRequestContentStream.h */; };
+		D5A4214B1D16F0E600471135 /* SEMultipartRequestContentStream.m in Sources */ = {isa = PBXBuildFile; fileRef = D5A421221D16F0E600471135 /* SEMultipartRequestContentStream.m */; };
+		D5A4214C1D16F0E600471135 /* SENetworkReachabilityTracker.h in Headers */ = {isa = PBXBuildFile; fileRef = D5A421231D16F0E600471135 /* SENetworkReachabilityTracker.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D5A4214D1D16F0E600471135 /* SENetworkReachabilityTracker.m in Sources */ = {isa = PBXBuildFile; fileRef = D5A421241D16F0E600471135 /* SENetworkReachabilityTracker.m */; };
+		D5A4214E1D16F0E600471135 /* SEDataSerializer.h in Headers */ = {isa = PBXBuildFile; fileRef = D5A421261D16F0E600471135 /* SEDataSerializer.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D5A4214F1D16F0E600471135 /* SEDataSerializer.m in Sources */ = {isa = PBXBuildFile; fileRef = D5A421271D16F0E600471135 /* SEDataSerializer.m */; };
+		D5A421501D16F0E600471135 /* SEJSONDataSerializer.h in Headers */ = {isa = PBXBuildFile; fileRef = D5A421281D16F0E600471135 /* SEJSONDataSerializer.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D5A421511D16F0E600471135 /* SEJSONDataSerializer.m in Sources */ = {isa = PBXBuildFile; fileRef = D5A421291D16F0E600471135 /* SEJSONDataSerializer.m */; };
+		D5A421521D16F0E600471135 /* SEPlainTextSerializer.h in Headers */ = {isa = PBXBuildFile; fileRef = D5A4212A1D16F0E600471135 /* SEPlainTextSerializer.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D5A421531D16F0E600471135 /* SEPlainTextSerializer.m in Sources */ = {isa = PBXBuildFile; fileRef = D5A4212B1D16F0E600471135 /* SEPlainTextSerializer.m */; };
+		D5A421541D16F0E600471135 /* SEWebFormSerializer.h in Headers */ = {isa = PBXBuildFile; fileRef = D5A4212C1D16F0E600471135 /* SEWebFormSerializer.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D5A421551D16F0E600471135 /* SEWebFormSerializer.m in Sources */ = {isa = PBXBuildFile; fileRef = D5A4212D1D16F0E600471135 /* SEWebFormSerializer.m */; };
+		D5A421561D16F0E600471135 /* SEEnvironmentService.h in Headers */ = {isa = PBXBuildFile; fileRef = D5A4212F1D16F0E600471135 /* SEEnvironmentService.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D5A421571D16F0E600471135 /* SEFetchParameters.h in Headers */ = {isa = PBXBuildFile; fileRef = D5A421311D16F0E600471135 /* SEFetchParameters.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D5A421581D16F0E600471135 /* SEFetchParameters.m in Sources */ = {isa = PBXBuildFile; fileRef = D5A421321D16F0E600471135 /* SEFetchParameters.m */; };
+		D5A421591D16F0E600471135 /* SEPersistenceService.h in Headers */ = {isa = PBXBuildFile; fileRef = D5A421331D16F0E600471135 /* SEPersistenceService.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D5A4215A1D16F0E600471135 /* SEPersistenceService.m in Sources */ = {isa = PBXBuildFile; fileRef = D5A421341D16F0E600471135 /* SEPersistenceService.m */; };
+		D5A4215B1D16F0E600471135 /* SEServiceLocator.h in Headers */ = {isa = PBXBuildFile; fileRef = D5A421361D16F0E600471135 /* SEServiceLocator.h */; };
+		D5A4215C1D16F0E600471135 /* SEServiceLocator.m in Sources */ = {isa = PBXBuildFile; fileRef = D5A421371D16F0E600471135 /* SEServiceLocator.m */; };
+		D5A4215D1D16F0E600471135 /* SEServiceWeakProxy.h in Headers */ = {isa = PBXBuildFile; fileRef = D5A421381D16F0E600471135 /* SEServiceWeakProxy.h */; };
+		D5A4215E1D16F0E600471135 /* SEServiceWeakProxy.m in Sources */ = {isa = PBXBuildFile; fileRef = D5A421391D16F0E600471135 /* SEServiceWeakProxy.m */; };
+		D5A4216B1D1783F200471135 /* SEDataRequestBuilderTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D5A421611D1783F200471135 /* SEDataRequestBuilderTests.m */; };
+		D5A4216D1D1783F200471135 /* SEDataRequestServiceImplTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D5A421631D1783F200471135 /* SEDataRequestServiceImplTests.m */; };
+		D5A4216E1D1783F200471135 /* SEJSONSerializerTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D5A421641D1783F200471135 /* SEJSONSerializerTests.m */; };
+		D5A4216F1D1783F200471135 /* SEMultipartRequestContentStreamTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D5A421651D1783F200471135 /* SEMultipartRequestContentStreamTests.m */; };
+		D5A421701D1783F200471135 /* SEPlainTextSerializerTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D5A421661D1783F200471135 /* SEPlainTextSerializerTests.m */; };
+		D5A421711D1783F200471135 /* SEWebFormSerializerTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D5A421671D1783F200471135 /* SEWebFormSerializerTests.m */; };
+		D5A421731D1783F200471135 /* SEPersistenceServiceTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D5A421691D1783F200471135 /* SEPersistenceServiceTests.m */; };
+		D5A421741D1783F200471135 /* SEServiceLocatorTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D5A4216A1D1783F200471135 /* SEServiceLocatorTests.m */; };
+		D5A421761D17874A00471135 /* SECancelableTokenTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D5A421751D17874A00471135 /* SECancelableTokenTests.m */; };
+		D5A4217D1D1792F300471135 /* OCMock.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D5A4217A1D1792F300471135 /* OCMock.framework */; };
+		D5E7C7861D18F1AE00D4FE83 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D5E7C7851D18F1AE00D4FE83 /* Foundation.framework */; };
+		D5E7C7881D18F1C100D4FE83 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D5E7C7871D18F1C100D4FE83 /* Security.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		D55F421D1D1AF1A700B84D60 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D5A420D31D16ED5400471135 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D5A420DB1D16ED5400471135;
+			remoteInfo = ServiceEssentials;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		D5A420DC1D16ED5400471135 /* ServiceEssentials.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ServiceEssentials.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D5A420DF1D16ED5400471135 /* ServiceEssentials.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ServiceEssentials.h; sourceTree = "<group>"; };
+		D5A420E11D16ED5400471135 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D5A420E61D16ED5400471135 /* ServiceEssentialsTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ServiceEssentialsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D5A420ED1D16ED5400471135 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D5A420F71D16EE4000471135 /* SEConstants.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SEConstants.h; sourceTree = "<group>"; };
+		D5A420F81D16EE4000471135 /* SEConstants.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SEConstants.m; sourceTree = "<group>"; };
+		D5A420FC1D16EE9E00471135 /* NSArray+SEJSONExtensions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSArray+SEJSONExtensions.h"; sourceTree = "<group>"; };
+		D5A420FD1D16EE9E00471135 /* NSArray+JSONExtensions.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSArray+JSONExtensions.m"; sourceTree = "<group>"; };
+		D5A421001D16EE9E00471135 /* NSDictionary+SEJSONExtensions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSDictionary+SEJSONExtensions.h"; sourceTree = "<group>"; };
+		D5A421011D16EE9E00471135 /* NSDictionary+SEJSONExtensions.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSDictionary+SEJSONExtensions.m"; sourceTree = "<group>"; };
+		D5A421021D16EE9E00471135 /* NSString+SEExtensions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSString+SEExtensions.h"; sourceTree = "<group>"; };
+		D5A421031D16EE9E00471135 /* NSString+SEExtensions.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSString+SEExtensions.m"; sourceTree = "<group>"; };
+		D5A421041D16EE9E00471135 /* SETools.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SETools.h; sourceTree = "<group>"; };
+		D5A421101D16F0E600471135 /* SECancellableToken.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SECancellableToken.h; sourceTree = "<group>"; };
+		D5A421111D16F0E600471135 /* SECancellableTokenImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SECancellableTokenImpl.h; sourceTree = "<group>"; };
+		D5A421121D16F0E600471135 /* SECancellableTokenImpl.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SECancellableTokenImpl.m; sourceTree = "<group>"; };
+		D5A421141D16F0E600471135 /* SEDataRequestJSONDeserializable.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SEDataRequestJSONDeserializable.h; sourceTree = "<group>"; };
+		D5A421151D16F0E600471135 /* SEDataRequestService.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SEDataRequestService.h; sourceTree = "<group>"; };
+		D5A421161D16F0E600471135 /* SEDataRequestServiceImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SEDataRequestServiceImpl.h; sourceTree = "<group>"; };
+		D5A421171D16F0E600471135 /* SEDataRequestServiceImpl.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SEDataRequestServiceImpl.m; sourceTree = "<group>"; };
+		D5A421181D16F0E600471135 /* SEDataRequestServicePrivate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SEDataRequestServicePrivate.h; sourceTree = "<group>"; };
+		D5A421191D16F0E600471135 /* SEDataRequestServiceSecurityHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SEDataRequestServiceSecurityHelper.h; sourceTree = "<group>"; };
+		D5A4211A1D16F0E600471135 /* SEDataRequestServiceSecurityHelper.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SEDataRequestServiceSecurityHelper.m; sourceTree = "<group>"; };
+		D5A4211B1D16F0E600471135 /* SEInternalDataRequest.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SEInternalDataRequest.h; sourceTree = "<group>"; };
+		D5A4211C1D16F0E600471135 /* SEInternalDataRequest.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SEInternalDataRequest.m; sourceTree = "<group>"; };
+		D5A4211D1D16F0E600471135 /* SEInternalDataRequestBuilder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SEInternalDataRequestBuilder.h; sourceTree = "<group>"; };
+		D5A4211E1D16F0E600471135 /* SEInternalDataRequestBuilder.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SEInternalDataRequestBuilder.m; sourceTree = "<group>"; };
+		D5A4211F1D16F0E600471135 /* SEMultipartRequestContentPart.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SEMultipartRequestContentPart.h; sourceTree = "<group>"; };
+		D5A421201D16F0E600471135 /* SEMultipartRequestContentPart.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SEMultipartRequestContentPart.m; sourceTree = "<group>"; };
+		D5A421211D16F0E600471135 /* SEMultipartRequestContentStream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SEMultipartRequestContentStream.h; sourceTree = "<group>"; };
+		D5A421221D16F0E600471135 /* SEMultipartRequestContentStream.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SEMultipartRequestContentStream.m; sourceTree = "<group>"; };
+		D5A421231D16F0E600471135 /* SENetworkReachabilityTracker.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SENetworkReachabilityTracker.h; sourceTree = "<group>"; };
+		D5A421241D16F0E600471135 /* SENetworkReachabilityTracker.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SENetworkReachabilityTracker.m; sourceTree = "<group>"; };
+		D5A421261D16F0E600471135 /* SEDataSerializer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SEDataSerializer.h; sourceTree = "<group>"; };
+		D5A421271D16F0E600471135 /* SEDataSerializer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SEDataSerializer.m; sourceTree = "<group>"; };
+		D5A421281D16F0E600471135 /* SEJSONDataSerializer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SEJSONDataSerializer.h; sourceTree = "<group>"; };
+		D5A421291D16F0E600471135 /* SEJSONDataSerializer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SEJSONDataSerializer.m; sourceTree = "<group>"; };
+		D5A4212A1D16F0E600471135 /* SEPlainTextSerializer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SEPlainTextSerializer.h; sourceTree = "<group>"; };
+		D5A4212B1D16F0E600471135 /* SEPlainTextSerializer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SEPlainTextSerializer.m; sourceTree = "<group>"; };
+		D5A4212C1D16F0E600471135 /* SEWebFormSerializer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SEWebFormSerializer.h; sourceTree = "<group>"; };
+		D5A4212D1D16F0E600471135 /* SEWebFormSerializer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SEWebFormSerializer.m; sourceTree = "<group>"; };
+		D5A4212F1D16F0E600471135 /* SEEnvironmentService.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SEEnvironmentService.h; sourceTree = "<group>"; };
+		D5A421311D16F0E600471135 /* SEFetchParameters.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SEFetchParameters.h; sourceTree = "<group>"; };
+		D5A421321D16F0E600471135 /* SEFetchParameters.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SEFetchParameters.m; sourceTree = "<group>"; };
+		D5A421331D16F0E600471135 /* SEPersistenceService.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SEPersistenceService.h; sourceTree = "<group>"; };
+		D5A421341D16F0E600471135 /* SEPersistenceService.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SEPersistenceService.m; sourceTree = "<group>"; };
+		D5A421361D16F0E600471135 /* SEServiceLocator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SEServiceLocator.h; sourceTree = "<group>"; };
+		D5A421371D16F0E600471135 /* SEServiceLocator.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SEServiceLocator.m; sourceTree = "<group>"; };
+		D5A421381D16F0E600471135 /* SEServiceWeakProxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SEServiceWeakProxy.h; sourceTree = "<group>"; };
+		D5A421391D16F0E600471135 /* SEServiceWeakProxy.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SEServiceWeakProxy.m; sourceTree = "<group>"; };
+		D5A421611D1783F200471135 /* SEDataRequestBuilderTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SEDataRequestBuilderTests.m; sourceTree = "<group>"; };
+		D5A421631D1783F200471135 /* SEDataRequestServiceImplTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SEDataRequestServiceImplTests.m; sourceTree = "<group>"; };
+		D5A421641D1783F200471135 /* SEJSONSerializerTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SEJSONSerializerTests.m; sourceTree = "<group>"; };
+		D5A421651D1783F200471135 /* SEMultipartRequestContentStreamTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SEMultipartRequestContentStreamTests.m; sourceTree = "<group>"; };
+		D5A421661D1783F200471135 /* SEPlainTextSerializerTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SEPlainTextSerializerTests.m; sourceTree = "<group>"; };
+		D5A421671D1783F200471135 /* SEWebFormSerializerTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SEWebFormSerializerTests.m; sourceTree = "<group>"; };
+		D5A421691D1783F200471135 /* SEPersistenceServiceTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SEPersistenceServiceTests.m; sourceTree = "<group>"; };
+		D5A4216A1D1783F200471135 /* SEServiceLocatorTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SEServiceLocatorTests.m; sourceTree = "<group>"; };
+		D5A421751D17874A00471135 /* SECancelableTokenTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SECancelableTokenTests.m; sourceTree = "<group>"; };
+		D5A4217A1D1792F300471135 /* OCMock.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = OCMock.framework; sourceTree = "<group>"; };
+		D5A4217C1D1792F300471135 /* OCMock.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = OCMock.framework; sourceTree = "<group>"; };
+		D5E7C7851D18F1AE00D4FE83 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		D5E7C7871D18F1C100D4FE83 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		D5A420D81D16ED5400471135 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D5A420E31D16ED5400471135 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D55F421C1D1AF1A000B84D60 /* ServiceEssentials.framework in Frameworks */,
+				D5E7C7881D18F1C100D4FE83 /* Security.framework in Frameworks */,
+				D5E7C7861D18F1AE00D4FE83 /* Foundation.framework in Frameworks */,
+				D5A4217D1D1792F300471135 /* OCMock.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		D5929E051D1A2AC700C4E22D /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				D5E7C7871D18F1C100D4FE83 /* Security.framework */,
+				D5E7C7851D18F1AE00D4FE83 /* Foundation.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		D5A420D21D16ED5400471135 = {
+			isa = PBXGroup;
+			children = (
+				D5A420DE1D16ED5400471135 /* ServiceEssentials */,
+				D5A420EA1D16ED5400471135 /* ServiceEssentialsTests */,
+				D5929E051D1A2AC700C4E22D /* Frameworks */,
+				D5A420DD1D16ED5400471135 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		D5A420DD1D16ED5400471135 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				D5A420DC1D16ED5400471135 /* ServiceEssentials.framework */,
+				D5A420E61D16ED5400471135 /* ServiceEssentialsTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		D5A420DE1D16ED5400471135 /* ServiceEssentials */ = {
+			isa = PBXGroup;
+			children = (
+				D5A420F61D16EE4000471135 /* Constants */,
+				D5A420FB1D16EE9E00471135 /* Tools */,
+				D5A4210E1D16F0E600471135 /* Services */,
+				D5A420DF1D16ED5400471135 /* ServiceEssentials.h */,
+				D5A420E11D16ED5400471135 /* Info.plist */,
+			);
+			path = ServiceEssentials;
+			sourceTree = "<group>";
+		};
+		D5A420EA1D16ED5400471135 /* ServiceEssentialsTests */ = {
+			isa = PBXGroup;
+			children = (
+				D5A421771D1792F300471135 /* Frameworks */,
+				D5A4215F1D1783F200471135 /* Services */,
+				D5A420ED1D16ED5400471135 /* Info.plist */,
+			);
+			path = ServiceEssentialsTests;
+			sourceTree = "<group>";
+		};
+		D5A420F61D16EE4000471135 /* Constants */ = {
+			isa = PBXGroup;
+			children = (
+				D5A420F71D16EE4000471135 /* SEConstants.h */,
+				D5A420F81D16EE4000471135 /* SEConstants.m */,
+			);
+			path = Constants;
+			sourceTree = "<group>";
+		};
+		D5A420FB1D16EE9E00471135 /* Tools */ = {
+			isa = PBXGroup;
+			children = (
+				D5A420FC1D16EE9E00471135 /* NSArray+SEJSONExtensions.h */,
+				D5A420FD1D16EE9E00471135 /* NSArray+JSONExtensions.m */,
+				D5A421001D16EE9E00471135 /* NSDictionary+SEJSONExtensions.h */,
+				D5A421011D16EE9E00471135 /* NSDictionary+SEJSONExtensions.m */,
+				D5A421021D16EE9E00471135 /* NSString+SEExtensions.h */,
+				D5A421031D16EE9E00471135 /* NSString+SEExtensions.m */,
+				D5A421041D16EE9E00471135 /* SETools.h */,
+			);
+			path = Tools;
+			sourceTree = "<group>";
+		};
+		D5A4210E1D16F0E600471135 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				D5A4210F1D16F0E600471135 /* Cancellable */,
+				D5A421131D16F0E600471135 /* DataRequestService */,
+				D5A4212E1D16F0E600471135 /* Environment */,
+				D5A421301D16F0E600471135 /* PersistenceService */,
+				D5A421351D16F0E600471135 /* ServiceLocation */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		D5A4210F1D16F0E600471135 /* Cancellable */ = {
+			isa = PBXGroup;
+			children = (
+				D5A421101D16F0E600471135 /* SECancellableToken.h */,
+				D5A421111D16F0E600471135 /* SECancellableTokenImpl.h */,
+				D5A421121D16F0E600471135 /* SECancellableTokenImpl.m */,
+			);
+			path = Cancellable;
+			sourceTree = "<group>";
+		};
+		D5A421131D16F0E600471135 /* DataRequestService */ = {
+			isa = PBXGroup;
+			children = (
+				D5A421251D16F0E600471135 /* Serializers */,
+				D5A421141D16F0E600471135 /* SEDataRequestJSONDeserializable.h */,
+				D5A421151D16F0E600471135 /* SEDataRequestService.h */,
+				D5A421161D16F0E600471135 /* SEDataRequestServiceImpl.h */,
+				D5A421171D16F0E600471135 /* SEDataRequestServiceImpl.m */,
+				D5A421181D16F0E600471135 /* SEDataRequestServicePrivate.h */,
+				D5A421191D16F0E600471135 /* SEDataRequestServiceSecurityHelper.h */,
+				D5A4211A1D16F0E600471135 /* SEDataRequestServiceSecurityHelper.m */,
+				D5A4211B1D16F0E600471135 /* SEInternalDataRequest.h */,
+				D5A4211C1D16F0E600471135 /* SEInternalDataRequest.m */,
+				D5A4211D1D16F0E600471135 /* SEInternalDataRequestBuilder.h */,
+				D5A4211E1D16F0E600471135 /* SEInternalDataRequestBuilder.m */,
+				D5A4211F1D16F0E600471135 /* SEMultipartRequestContentPart.h */,
+				D5A421201D16F0E600471135 /* SEMultipartRequestContentPart.m */,
+				D5A421211D16F0E600471135 /* SEMultipartRequestContentStream.h */,
+				D5A421221D16F0E600471135 /* SEMultipartRequestContentStream.m */,
+				D5A421231D16F0E600471135 /* SENetworkReachabilityTracker.h */,
+				D5A421241D16F0E600471135 /* SENetworkReachabilityTracker.m */,
+			);
+			path = DataRequestService;
+			sourceTree = "<group>";
+		};
+		D5A421251D16F0E600471135 /* Serializers */ = {
+			isa = PBXGroup;
+			children = (
+				D5A421261D16F0E600471135 /* SEDataSerializer.h */,
+				D5A421271D16F0E600471135 /* SEDataSerializer.m */,
+				D5A421281D16F0E600471135 /* SEJSONDataSerializer.h */,
+				D5A421291D16F0E600471135 /* SEJSONDataSerializer.m */,
+				D5A4212A1D16F0E600471135 /* SEPlainTextSerializer.h */,
+				D5A4212B1D16F0E600471135 /* SEPlainTextSerializer.m */,
+				D5A4212C1D16F0E600471135 /* SEWebFormSerializer.h */,
+				D5A4212D1D16F0E600471135 /* SEWebFormSerializer.m */,
+			);
+			path = Serializers;
+			sourceTree = "<group>";
+		};
+		D5A4212E1D16F0E600471135 /* Environment */ = {
+			isa = PBXGroup;
+			children = (
+				D5A4212F1D16F0E600471135 /* SEEnvironmentService.h */,
+			);
+			path = Environment;
+			sourceTree = "<group>";
+		};
+		D5A421301D16F0E600471135 /* PersistenceService */ = {
+			isa = PBXGroup;
+			children = (
+				D5A421311D16F0E600471135 /* SEFetchParameters.h */,
+				D5A421321D16F0E600471135 /* SEFetchParameters.m */,
+				D5A421331D16F0E600471135 /* SEPersistenceService.h */,
+				D5A421341D16F0E600471135 /* SEPersistenceService.m */,
+			);
+			path = PersistenceService;
+			sourceTree = "<group>";
+		};
+		D5A421351D16F0E600471135 /* ServiceLocation */ = {
+			isa = PBXGroup;
+			children = (
+				D5A421361D16F0E600471135 /* SEServiceLocator.h */,
+				D5A421371D16F0E600471135 /* SEServiceLocator.m */,
+				D5A421381D16F0E600471135 /* SEServiceWeakProxy.h */,
+				D5A421391D16F0E600471135 /* SEServiceWeakProxy.m */,
+			);
+			path = ServiceLocation;
+			sourceTree = "<group>";
+		};
+		D5A4215F1D1783F200471135 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				D5A421601D1783F200471135 /* DataRequestService */,
+				D5A421751D17874A00471135 /* SECancelableTokenTests.m */,
+				D5A421691D1783F200471135 /* SEPersistenceServiceTests.m */,
+				D5A4216A1D1783F200471135 /* SEServiceLocatorTests.m */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		D5A421601D1783F200471135 /* DataRequestService */ = {
+			isa = PBXGroup;
+			children = (
+				D5A421611D1783F200471135 /* SEDataRequestBuilderTests.m */,
+				D5A421631D1783F200471135 /* SEDataRequestServiceImplTests.m */,
+				D5A421641D1783F200471135 /* SEJSONSerializerTests.m */,
+				D5A421651D1783F200471135 /* SEMultipartRequestContentStreamTests.m */,
+				D5A421661D1783F200471135 /* SEPlainTextSerializerTests.m */,
+				D5A421671D1783F200471135 /* SEWebFormSerializerTests.m */,
+			);
+			path = DataRequestService;
+			sourceTree = "<group>";
+		};
+		D5A421771D1792F300471135 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				D5A421781D1792F300471135 /* OCMock */,
+			);
+			path = Frameworks;
+			sourceTree = "<group>";
+		};
+		D5A421781D1792F300471135 /* OCMock */ = {
+			isa = PBXGroup;
+			children = (
+				D5A421791D1792F300471135 /* iOS */,
+				D5A4217B1D1792F300471135 /* OSX */,
+			);
+			path = OCMock;
+			sourceTree = "<group>";
+		};
+		D5A421791D1792F300471135 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				D5A4217A1D1792F300471135 /* OCMock.framework */,
+			);
+			path = iOS;
+			sourceTree = "<group>";
+		};
+		D5A4217B1D1792F300471135 /* OSX */ = {
+			isa = PBXGroup;
+			children = (
+				D5A4217C1D1792F300471135 /* OCMock.framework */,
+			);
+			path = OSX;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		D5A420D91D16ED5400471135 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D5A421441D16F0E600471135 /* SEInternalDataRequest.h in Headers */,
+				D5A4214A1D16F0E600471135 /* SEMultipartRequestContentStream.h in Headers */,
+				D5A421561D16F0E600471135 /* SEEnvironmentService.h in Headers */,
+				D5A4210B1D16EE9E00471135 /* NSString+SEExtensions.h in Headers */,
+				D5A421501D16F0E600471135 /* SEJSONDataSerializer.h in Headers */,
+				D5A4213A1D16F0E600471135 /* SECancellableToken.h in Headers */,
+				D5A421461D16F0E600471135 /* SEInternalDataRequestBuilder.h in Headers */,
+				D5A4213D1D16F0E600471135 /* SEDataRequestJSONDeserializable.h in Headers */,
+				D5A4213E1D16F0E600471135 /* SEDataRequestService.h in Headers */,
+				D5A4215D1D16F0E600471135 /* SEServiceWeakProxy.h in Headers */,
+				D5A4214C1D16F0E600471135 /* SENetworkReachabilityTracker.h in Headers */,
+				D5A421421D16F0E600471135 /* SEDataRequestServiceSecurityHelper.h in Headers */,
+				D5A421411D16F0E600471135 /* SEDataRequestServicePrivate.h in Headers */,
+				D5A420F91D16EE4000471135 /* SEConstants.h in Headers */,
+				D5A421541D16F0E600471135 /* SEWebFormSerializer.h in Headers */,
+				D5A420E01D16ED5400471135 /* ServiceEssentials.h in Headers */,
+				D5A4214E1D16F0E600471135 /* SEDataSerializer.h in Headers */,
+				D5A4215B1D16F0E600471135 /* SEServiceLocator.h in Headers */,
+				D5A421591D16F0E600471135 /* SEPersistenceService.h in Headers */,
+				D5A421051D16EE9E00471135 /* NSArray+SEJSONExtensions.h in Headers */,
+				D5A4213B1D16F0E600471135 /* SECancellableTokenImpl.h in Headers */,
+				D5A421521D16F0E600471135 /* SEPlainTextSerializer.h in Headers */,
+				D5A421571D16F0E600471135 /* SEFetchParameters.h in Headers */,
+				D5A421091D16EE9E00471135 /* NSDictionary+SEJSONExtensions.h in Headers */,
+				D5A4210D1D16EE9E00471135 /* SETools.h in Headers */,
+				D5A4213F1D16F0E600471135 /* SEDataRequestServiceImpl.h in Headers */,
+				D5A421481D16F0E600471135 /* SEMultipartRequestContentPart.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		D5A420DB1D16ED5400471135 /* ServiceEssentials */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D5A420F01D16ED5400471135 /* Build configuration list for PBXNativeTarget "ServiceEssentials" */;
+			buildPhases = (
+				D5A420D71D16ED5400471135 /* Sources */,
+				D5A420D81D16ED5400471135 /* Frameworks */,
+				D5A420D91D16ED5400471135 /* Headers */,
+				D5A420DA1D16ED5400471135 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ServiceEssentials;
+			productName = ServiceEssentials;
+			productReference = D5A420DC1D16ED5400471135 /* ServiceEssentials.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+		D5A420E51D16ED5400471135 /* ServiceEssentialsTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D5A420F31D16ED5400471135 /* Build configuration list for PBXNativeTarget "ServiceEssentialsTests" */;
+			buildPhases = (
+				D5A420E21D16ED5400471135 /* Sources */,
+				D5A420E31D16ED5400471135 /* Frameworks */,
+				D5A420E41D16ED5400471135 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D55F421E1D1AF1A700B84D60 /* PBXTargetDependency */,
+			);
+			name = ServiceEssentialsTests;
+			productName = ServiceEssentialsTests;
+			productReference = D5A420E61D16ED5400471135 /* ServiceEssentialsTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		D5A420D31D16ED5400471135 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0730;
+				ORGANIZATIONNAME = ServiceEssentials;
+				TargetAttributes = {
+					D5A420DB1D16ED5400471135 = {
+						CreatedOnToolsVersion = 7.3.1;
+					};
+					D5A420E51D16ED5400471135 = {
+						CreatedOnToolsVersion = 7.3.1;
+					};
+				};
+			};
+			buildConfigurationList = D5A420D61D16ED5400471135 /* Build configuration list for PBXProject "ServiceEssentials" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = D5A420D21D16ED5400471135;
+			productRefGroup = D5A420DD1D16ED5400471135 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				D5A420DB1D16ED5400471135 /* ServiceEssentials */,
+				D5A420E51D16ED5400471135 /* ServiceEssentialsTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		D5A420DA1D16ED5400471135 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D5A420E41D16ED5400471135 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		D5A420D71D16ED5400471135 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D5A421401D16F0E600471135 /* SEDataRequestServiceImpl.m in Sources */,
+				D5A4213C1D16F0E600471135 /* SECancellableTokenImpl.m in Sources */,
+				D5A421581D16F0E600471135 /* SEFetchParameters.m in Sources */,
+				D5A4210C1D16EE9E00471135 /* NSString+SEExtensions.m in Sources */,
+				D5A421431D16F0E600471135 /* SEDataRequestServiceSecurityHelper.m in Sources */,
+				D5A4214D1D16F0E600471135 /* SENetworkReachabilityTracker.m in Sources */,
+				D5A4215E1D16F0E600471135 /* SEServiceWeakProxy.m in Sources */,
+				D5A421471D16F0E600471135 /* SEInternalDataRequestBuilder.m in Sources */,
+				D5A4210A1D16EE9E00471135 /* NSDictionary+SEJSONExtensions.m in Sources */,
+				D5A421491D16F0E600471135 /* SEMultipartRequestContentPart.m in Sources */,
+				D5A4214F1D16F0E600471135 /* SEDataSerializer.m in Sources */,
+				D5A421551D16F0E600471135 /* SEWebFormSerializer.m in Sources */,
+				D5A421511D16F0E600471135 /* SEJSONDataSerializer.m in Sources */,
+				D5A421451D16F0E600471135 /* SEInternalDataRequest.m in Sources */,
+				D5A4215C1D16F0E600471135 /* SEServiceLocator.m in Sources */,
+				D5A4215A1D16F0E600471135 /* SEPersistenceService.m in Sources */,
+				D5A421061D16EE9E00471135 /* NSArray+JSONExtensions.m in Sources */,
+				D5A421531D16F0E600471135 /* SEPlainTextSerializer.m in Sources */,
+				D5A4214B1D16F0E600471135 /* SEMultipartRequestContentStream.m in Sources */,
+				D5A420FA1D16EE4000471135 /* SEConstants.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D5A420E21D16ED5400471135 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D5A4216F1D1783F200471135 /* SEMultipartRequestContentStreamTests.m in Sources */,
+				D5A4216E1D1783F200471135 /* SEJSONSerializerTests.m in Sources */,
+				D5A421761D17874A00471135 /* SECancelableTokenTests.m in Sources */,
+				D5A421731D1783F200471135 /* SEPersistenceServiceTests.m in Sources */,
+				D5A421711D1783F200471135 /* SEWebFormSerializerTests.m in Sources */,
+				D5A4216B1D1783F200471135 /* SEDataRequestBuilderTests.m in Sources */,
+				D5A4216D1D1783F200471135 /* SEDataRequestServiceImplTests.m in Sources */,
+				D5A421741D1783F200471135 /* SEServiceLocatorTests.m in Sources */,
+				D5A421701D1783F200471135 /* SEPlainTextSerializerTests.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D55F421E1D1AF1A700B84D60 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D5A420DB1D16ED5400471135 /* ServiceEssentials */;
+			targetProxy = D55F421D1D1AF1A700B84D60 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		D5A420EE1D16ED5400471135 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 9.3;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Debug;
+		};
+		D5A420EF1D16ED5400471135 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 9.3;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
+		};
+		D5A420F11D16ED5400471135 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = ServiceEssentials/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.service-essentials.ServiceEssentials";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+			};
+			name = Debug;
+		};
+		D5A420F21D16ED5400471135 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = ServiceEssentials/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.service-essentials.ServiceEssentials";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+			};
+			name = Release;
+		};
+		D5A420F41D16ED5400471135 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/ServiceEssentialsTests/Frameworks/OCMock/iOS",
+					"$(DEVELOPER_FRAMEWORKS_DIR)",
+				);
+				HEADER_SEARCH_PATHS = "";
+				INFOPLIST_FILE = ServiceEssentialsTests/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks $(FRAMEWORK_SEARCH_PATHS)";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.service-essentials.ServiceEssentialsTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		D5A420F51D16ED5400471135 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/ServiceEssentialsTests/Frameworks/OCMock/iOS",
+					"$(DEVELOPER_FRAMEWORKS_DIR)",
+				);
+				HEADER_SEARCH_PATHS = "";
+				INFOPLIST_FILE = ServiceEssentialsTests/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks $(FRAMEWORK_SEARCH_PATHS)";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.service-essentials.ServiceEssentialsTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		D5A420D61D16ED5400471135 /* Build configuration list for PBXProject "ServiceEssentials" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D5A420EE1D16ED5400471135 /* Debug */,
+				D5A420EF1D16ED5400471135 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D5A420F01D16ED5400471135 /* Build configuration list for PBXNativeTarget "ServiceEssentials" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D5A420F11D16ED5400471135 /* Debug */,
+				D5A420F21D16ED5400471135 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D5A420F31D16ED5400471135 /* Build configuration list for PBXNativeTarget "ServiceEssentialsTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D5A420F41D16ED5400471135 /* Debug */,
+				D5A420F51D16ED5400471135 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = D5A420D31D16ED5400471135 /* Project object */;
+}
