@@ -18,6 +18,7 @@ FOUNDATION_EXPORT const unsigned char ServiceEssentialsVersionString[];
 
 // Public headers
 #import <ServiceEssentials/SEConstants.h>
+#import <ServiceEssentials/SEServiceLocator.h>
 #import <ServiceEssentials/NSArray+SEJSONExtensions.h>
 #import <ServiceEssentials/NSDictionary+SEJSONExtensions.h>
 #import <ServiceEssentials/NSString+SEExtensions.h>
