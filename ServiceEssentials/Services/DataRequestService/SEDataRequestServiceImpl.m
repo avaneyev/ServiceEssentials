@@ -939,7 +939,7 @@ static NSString * _Nonnull const SEDataRequestServiceBackgroundTaskId = @"com.se
 #else
         if (failure != nil) {
             dispatch_async(completionQueue, ^{
-                failure([NSError errorWithDomain:AlphaNgenErrorDomain code:DataRequestServiceSerializationFailure userInfo:@{ NSLocalizedDescriptionKey: reason }]);
+                failure([NSError errorWithDomain:SEErrorDomain code:SEDataRequestServiceSerializationFailure userInfo:@{ NSLocalizedDescriptionKey: reason }]);
             });
         }
         return NO;
