@@ -34,7 +34,7 @@
     while (actualLength < length)
     {
         uint32_t number = arc4random_uniform(generationModule);
-        for (uint32_t j = 0; j < 5 && actualLength >= length; ++j)
+        for (uint32_t j = 0; j < 5 && actualLength < length; ++j)
         {
             uint32_t index = number % CharactersToChooseCount;
             [result appendFormat:@"%C", [alphanumeric characterAtIndex:index]];
