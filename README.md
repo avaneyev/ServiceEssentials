@@ -1,6 +1,6 @@
 ## Service Essentials
 Service Essentials help build complex, extensible applications. They do it by promoting service-oriented architecture, which decreases coupling, improves testability and reduces unwanted complexity.
-More about the approach and its advantages in the [Service-Oriented Approach](.#Service-Oriented Approach)
+More about the approach and its advantages in the Service-Oriented Approach section.
 
 *Service Essentials include these basic building blocks:*
 * Service Locator to register and find services in the application.
