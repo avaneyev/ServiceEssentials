@@ -67,7 +67,10 @@ Hierarchical containers provide this ability. A dependency container that has a 
 *Coming up*
 
 ### Credits
-*Coming up*
+* This project uses [OCMock](http://ocmock.org), a great framework for creating mocks in all kinds of tests.
+* This project uses a few modified code pieces and a number of ideas from [AFNetworking](https://github.com/AFNetworking/AFNetworking).
+* An idea to implement a version of Service Locator came from [Nikita Leonov](https://github.com/nikita-leonov/NLServiceLocator).
+* My first experience with Service Location and service-oriented applications came from [Microsoft Prism](https://msdn.microsoft.com/en-us/library/ff921142.aspx), it was very useful at the time.
 
 ### License
 Service Essentials are released under the BSD license. See LICENSE for details.
