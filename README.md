@@ -25,10 +25,11 @@ There are numerous ways to register a dependency, which could be used in differe
 ```objective-c
 [serviceLocator registerService:serviceObject forProtocol:@protocol(DependencyProtocol)];
 ```
-* Lazy registration - creates a dependency when it's first required. Works well for dependencies that are expensive to create or maintain and not always needed, or in cases when startup time is the highest priority.
+* Lazy registration - creates a dependency when it's first required. Works well for dependencies that are expensive to create or maintain and not always needed, or in cases when startup time is the highest priority. Uses a block which is invoked when the dependency is first requested; the block takes the service locator as a parameter and may use it to resolve any dependencies neede to construct the instance.
 ```objective-c
-[serviceLocator registerLazyEvaluatedServiceWithConstructionBlock:^{
+[serviceLocator registerLazyEvaluatedServiceWithConstructionBlock:^(SEServiceLocator * _Nonnull locator){
                                                       // construct an instance.
+                                                      // use service locator passed as a parameter if needed
                                                       return dependency;
                                                     } forProtocol:@protocol(DependencyProtocol)];
 ```
