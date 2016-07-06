@@ -1,6 +1,6 @@
 ## Service Essentials
 Service Essentials help build complex, extensible applications. They do it by promoting service-oriented architecture, which decreases coupling, improves testability and reduces unwanted complexity.
-More about the approach and its advantages in the Service-Oriented Approach section.
+More about the approach and its advantages in the [Service-Oriented Approach](../master/README.md#service-oriented-approach) section.
 
 *Service Essentials include these basic building blocks:*
 * Service Locator to register and find services in the application.
@@ -59,7 +59,42 @@ It is often necessary to create scoped dependencies - limited in either visibili
 Hierarchical containers provide this ability. A dependency container that has a parent attempts to resolve a dependency within itself, if that fails - tries to do it in its parent, and so on until a dependency is resolved or root is reached. A child container is, in effect, a scope that can be limited in time or visibility, and can cover some dependencies from higher levels of the hierarchy. Root container typically serves as global.
 
 ### Data Request Service
-*Coming up*
+Data Request Service is a generic service for making HTTP requests. It combines the convenience of making simple requests with one method call and the power of customizing requests with a request builder.
+Features include:
+* Single-call data requests, such as `GET` or `POST`;
+* Customizable requests, including downloads and multipart, using a builder;
+* Thread-safe: requests can be submitted from any thread, cliens can specify a queue where callbacks should be invoked;
+* Security features like certificate pinning, unified policy for other services like streaming, and unsafe request making for resources that don't require protection;
+* Full deserialization to type-safe models;
+* Support for multiple MIME types; support for custom MIME type handlers coming up;
+* Reachability tracking;
+* Basic support for environment switching.
+
+#### Getting started with Data Request Service
+Data request service requires an Environment Service - an object that implements `SEEnvironmentService` protocol. The only requirements to that object are that it returns a valid base URL for network requests and posts a notification if an environment changes. 
+If environment switching is not required, Environment Service may just return a constant URL.
+Now an instance of the data request service can be created - typically there is just one per application:
+```objective-c
+// Obtain an instance of environment service
+id<SEEnvironmentService> environmentService = ...;
+// Choose your session configuration
+NSURLSessionConfiguration *sessionConfig = ...; 
+// Choose certificate pinning type
+SEDataRequestCertificatePinningType pinningType = ...; // None, certificate, public key
+// Instantiate a data request service
+id<SEDataRequestService> dataRequestService = [[SEDataRequestServiceImpl alloc] initWithEnvironmentService:environmentService sessionConfiguration:sessionConfig pinningType:pinningType applicationBackgroundDefault:NO];
+```
+
+#### Making simple data requests
+Simple data requests can be made using various convenience methods like `GET:...`, `POST:...` or `PUT:...`, for example:
+```objective-c
+id<SECancellableToken> requestToken = [dataRequestService GET:@"endpoint_path" parameters:@{ @"param": @"value" } success:^(id  _Nullable data, NSURLResponse * _Nonnull response) {
+            // Handle successful response
+        } failure:^(NSError * _Nonnull error) {
+            // Handle failure
+        } completionQueue:dispatch_get_main_queue()];
+```
+Request methods return a token that can be used to track or cancel a request later.
 
 ### Persistence Service
 *Coming up*
