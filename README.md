@@ -53,7 +53,7 @@ At this stage no information is given about the way dependency was registered.
 #### Hierarchical containers:
 It is often necessary to create scoped dependencies - limited in either visibility or lifetime. A couple of examples:
 
-* a workflow of 5 views shown one after another needs depends on services that are only used in that workflow - dependencies limited to the lifetime of the workflow;
+* a workflow of 5 views shown one after another where view controllers depend on services that are only used in that workflow - dependencies limited to the lifetime of the workflow;
 * partner integration component needs to send network requests differently (with different authorization mechanism and parameters), no other part of the application should be making requests that way - dependencies limited in visibility.
 
 Hierarchical containers provide this ability. A dependency container that has a parent attempts to resolve a dependency within itself, if that fails - tries to do it in its parent, and so on until a dependency is resolved or root is reached. A child container is, in effect, a scope that can be limited in time or visibility, and can cover some dependencies from higher levels of the hierarchy. Root container typically serves as global.
@@ -95,6 +95,45 @@ id<SECancellableToken> requestToken = [dataRequestService GET:@"endpoint_path" p
         } completionQueue:dispatch_get_main_queue()];
 ```
 Request methods return a token that can be used to track or cancel a request later.
+If the request above completes successfully, success callback is invoked with `data` deserialized to generic types based on MIME type. For example, for `application/json` it might be an instance of `NSDictionary`.
+
+#### Deserializing data to models
+To deserialize a JSON response all the way to a type-safe model, a class of that model needs to conform to `SEDataRequestJSONDeserializable` protocol, as in the example below:
+```objective-c
+@interface MyDataModel : NSObject<SEDataRequestJSONDeserializable>
+@end
+
+@implementation MyDataModel
++ (nullable instancetype) deserializeFromJSON: (nonnull NSDictionary *) json
+{
+    // perform the deserialization
+    return model;
+}
+@end
+```
+Then a request that will fully deserialize the response can be made:
+```objective-c
+id<SECancellableToken> requestToken = [dataRequestService GET:@"endpoint_path" parameters:@{ @"param": @"value" } deserializeToClass:[MyDataModel class]  success:^(id  _Nullable data, NSURLResponse * _Nonnull response) {
+            // Handle successful response
+        } failure:^(NSError * _Nonnull error) {
+            // Handle failure
+        } completionQueue:dispatch_get_main_queue()];
+```
+If this request succeeds, `data` returned in the callback is an instance of `MyDataModel` or an array of those instances if the JSON was an array.
+
+#### Downloading data
+A download request is just a `GET` request that stores the data on disk as opposed to fetching the data in memory. Downloading data is useful for images, documents and other kinds of user content.
+Here's how a download request looks like:
+```objective-c
+NSURL *localFileURL = ...; // obtain a local file URL - for example, in a documents directory.
+id<SECancellableToken> requestToken = [dataRequestService download:@"content_path" parameters:@{...} saveAs:localFileURL success:^(id  _Nullable data, NSURLResponse * _Nonnull response) {
+        // Handle successful response
+    } failure:^(NSError * _Nonnull error) {
+        // Handle failure
+    } progress:^(int64_t bytesWritten, int64_t totalBytesWritten, int64_t totalBytesExpected) {
+        // handle progress if needed 
+    } completionQueue:dispatch_get_main_queue()];
+```
 
 ### Persistence Service
 *Coming up*
