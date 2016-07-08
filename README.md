@@ -2,10 +2,10 @@
 Service Essentials help build complex, extensible applications. They do it by promoting service-oriented architecture, which decreases coupling, improves testability and reduces unwanted complexity.
 More about the approach and its advantages in the [Service-Oriented Approach](../master/README.md#service-oriented-approach) section.
 
-*Service Essentials include these basic building blocks:*
-* Service Locator to register and find services in the application.
-* Data Request Service to make network requests
-* Persistence Service to manage persistent data in Core Data storage. 
+**Service Essentials include these basic building blocks:**
+* [Service Locator](../master/README.md#service-locator) to register and find services in the application.
+* [Data Request Service](../master/README.md#data-request-service) to make network requests
+* [Persistence Service](../master/README.md#persistence-service) to manage persistent data in Core Data storage. 
 
 ### Getting Started
 Starting with Service Essentials is easy:
