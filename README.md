@@ -137,11 +137,11 @@ id<SECancellableToken> requestToken = [dataRequestService download:@"content_pat
 
 #### Building more complex requests
 When a data request requires more fine-grained settings, data request builder can be used.
-1. Create a request builder:
+###### 1. Create a request builder:
 ```objective-c
 id<SEDataRequestBuilder> builder = [dataRequestService createRequestBuilder];
 ```
-2. Define required request attributes, such as method and callbacks:
+###### 2. Define required request attributes, such as method and callbacks:
 ```objective-c
 id<SEDataRequestCustomizer> request = [builder POST:@"endpoint_path" success:^(id  _Nullable data, NSURLResponse * _Nonnull response) {
         // handle successful response, same way as with simple requests
@@ -149,23 +149,23 @@ id<SEDataRequestCustomizer> request = [builder POST:@"endpoint_path" success:^(i
         // handle error
     } completionQueue:dispatch_get_main_queue()]
 ```
-3. Customize the request parameters. A few examples:
-⋅⋅* Set model class to deserialize the response (works the same way as with simple methods).
+###### 3. Customize the request parameters. A few examples:
+* Set model class to deserialize the response (works the same way as with simple methods).
 ```objective-c
 [request setDeserializeClass:[MyDataModel class]];
 ```
-⋅⋅* Set content encoding
+* Set content encoding
 ```objective-c
 [request setContentEncoding:encoding];
 ```
-⋅⋅* Set headers
+* Set headers
 ```objective-c
 [request setHTTPHeader:@"Header-value" forkey:@"Header-Name"];
 ```
-⋅⋅* Set request body
+* Set request body
 [request setBodyParameters:@{ @"parameter": @"value" }];
-⋅⋅* Attach multipart content
-There are a few ways to attach multipart content, depending on content type:
+* Attach multipart content
+There are a few ways to attach multipart content, depending on content type.
 For arbitrary data:
 ```objective-c
 [request appendPartWithData:data name:@"part-name" fileName:@"file-name-or-nil" mimeType:@"application/pdf" error:&error];
@@ -179,6 +179,17 @@ For files on device:
 NSURL *fileURL = ...; // local file URL
 [request appendPartWithFileURL:fileURL name:@"part-name" error:&error];
 ```
+###### 4. Submit the request
+Use either
+```objective-c
+id<SECancellableToken> requestToken = [request submit];
+```
+or
+```objective-c
+id<SECancellableToken> requestToken = [request submitAsUpload:YES];
+```
+First version determines how to send a request (as an upload or not) on its own. The second allows specifying it explicitly.
+Upload requests are only supported for methods that have body (`POST` and `PUT`), and theoretically can be used with a background session.
 
 ### Persistence Service
 *Coming up*
