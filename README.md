@@ -163,7 +163,9 @@ id<SEDataRequestCustomizer> request = [builder POST:@"endpoint_path" success:^(i
 [request setHTTPHeader:@"Header-value" forkey:@"Header-Name"];
 ```
 * Set request body
+```objective-c
 [request setBodyParameters:@{ @"parameter": @"value" }];
+```
 * Attach multipart content
 There are a few ways to attach multipart content, depending on content type.
 For arbitrary data:
@@ -192,7 +194,27 @@ First version determines how to send a request (as an upload or not) on its own.
 Upload requests are only supported for methods that have body (`POST` and `PUT`), and theoretically can be used with a background session.
 
 ### Persistence Service
-*Coming up*
+Persistence Service is a generic service for storing data in Core Data. It does most of the heavy lifting when performing CRUD operations (create, read, update, delete).
+Features include:
+* Simple methods for one-line CRUD operations;
+* Synchronous and asynchronous versions;
+* [Multiple contexts through hierarchical service instances](../master/README.md#hierarchical-instances);
+* Customizable update propagation;
+* [Transforms](../master/README.md#transforms).
+
+#### Initialization
+
+#### Creating Records
+
+#### Fetching Records
+
+#### Transforms
+
+#### Updating Records
+
+#### Deleting Records
+
+#### Hierarchical Instances
 
 ### Service-Oriented Approach
 *Coming up*
