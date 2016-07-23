@@ -18,6 +18,7 @@ That's it!
 
 ### Service Locator
 Service Locator is a dependency injection container. It has two main features: register a dependency and resolve a dependency. All service identification is based on protocols.
+Service Locator is implemented by the `SEServiceLocator` class.
 #### Registering a dependency:
 There are numerous ways to register a dependency, which could be used in different situations.
 
@@ -69,6 +70,8 @@ Features include:
 * Support for multiple MIME types; support for custom MIME type handlers coming up;
 * Reachability tracking;
 * Basic support for environment switching.
+
+Data Request Service interface is defined in the `SEDataRequestService` protocol, the implementation is provided by the `SEDataRequestServiceImpl` class.
 
 #### Getting started with Data Request Service
 Data request service requires an Environment Service - an object that implements `SEEnvironmentService` protocol. The only requirements to that object are that it returns a valid base URL for network requests and posts a notification if an environment changes. 
@@ -202,7 +205,45 @@ Features include:
 * Customizable update propagation;
 * [Transforms](../master/README.md#transforms).
 
+#### Persistence Service basics
+* Persistence Service instances correspond to Managed Object Contexts and are hierarchical same way as Managed Object Contexts are. Root instance is backed by a context that is associated with a persistent store and child instances are backed by nexted contexts and may be used for main queue operations or worker contexts.
+
+* *Transforms* are a way of preventing Managed Objects from travelling across different components of the application. Using Managed Objects across the application usually implies the complexity of managing object mutability, their belonging to different contexts and non-trivial concurrency model. An alternative to that is to use transient (and preferrably read-only) objects across the application, loading data from managed objects to transient objects and storing transient object as managed. Simply put, *Transforms* are a single point of conversion between managed and transient objects for operations like *create* or *read*.
+
+* Persistence service interface is defined in the `SEPersistenceService` protocol, the implementation is provided by the `SEPersistenceServiceImpl` class.
+
 #### Initialization
+There are 2 ways to initialize a root persistence service.
+First uses a *managed object model* object:
+```objective-c
+- (nonnull instancetype)initWithDataModel:(nonnull NSManagedObjectModel *)dataModel storePath:(nonnull NSString *)storePath;
+```
+Second uses a *managed object model name*:
+```objective-c
+- (nonnull instancetype)initWithDataModelName:(nonnull NSString *)dataModelName storePath:(nonnull NSString *)storePath;
+```
+The first is most useful when a model is created at runtime in memory, the second is for loading the managed object model files (`*.momd`).
+Here's an example:
+```objective-c
+NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+NSString *documentsDirectory = [paths objectAtIndex:0];
+NSString *coreDataPath = [documentsDirectory stringByAppendingPathComponent:@"MyDataModel.sqlite"];
+SEPersistenceServiceImpl *persistenceService = [[SEPersistenceServiceImpl alloc] initWithDataModelName:@"MyDataModel" storePath:coreDataPath];
+```
+**Note:** the persistent service initializes asynchronously to avoid blocking the calling thread. The initialization may be time consuming, since it may need to create or migrate the physical store. When the service is initialized and ready to be used, `isInitialized` flag is set to `YES`. Performing any operations on an uninitialized service causes an exception.
+
+There are a couple of methods to create child service instances, first creates a service backed by a main queue context and second creates a service backed by a private queue:
+```objective-c
+- (nonnull id<SEPersistenceService>)createChildPersistenceServiceWithMainQueueConcurrency;
+- (nonnull id<SEPersistenceService>)createChildPersistenceServiceWithPrivateQueueConcurrency;
+```
+
+If explicit nested Managed Object Contexts are needed, there are methods to create them as well:
+```objective-c
+- (nonnull NSManagedObjectContext *)createChildContextWithMainQueueConcurrency;
+- (nonnull NSManagedObjectContext *)createChildContextWithPrivateQueueConcurrency;
+```
+**Note:** a child persistence service instance is initialized only when its parent is initialized.
 
 #### Creating Records
 
@@ -213,8 +254,6 @@ Features include:
 #### Updating Records
 
 #### Deleting Records
-
-#### Hierarchical Instances
 
 ### Service-Oriented Approach
 *Coming up*
