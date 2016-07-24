@@ -208,7 +208,16 @@ Features include:
 #### Persistence Service basics
 * Persistence Service instances correspond to Managed Object Contexts and are hierarchical same way as Managed Object Contexts are. Root instance is backed by a context that is associated with a persistent store and child instances are backed by nexted contexts and may be used for main queue operations or worker contexts.
 
+* All methods that manipulate records have 2 versions: synchronous and asynchronous. 
+  * Asynchronous version takes a pair of callbacks (`success` and `failure`) and a queue that will be used to invoke the callbacks. 
+  * Synchronous version has a word `Wait` in the method name to highlight the fact that it will block the current thread and wait until the method completes. It returns `YES` if the operation succeeds or `NO` if it fails. In case of failure an error may be returned to the autoreleasing `error` parameter. For an example, see [Creating records](../master/README.md#creating-records)
+
 * *Transforms* are a way of preventing Managed Objects from travelling across different components of the application. Using Managed Objects across the application usually implies the complexity of managing object mutability, their belonging to different contexts and non-trivial concurrency model. An alternative to that is to use transient (and preferrably read-only) objects across the application, loading data from managed objects to transient objects and storing transient object as managed. Simply put, *Transforms* are a single point of conversion between managed and transient objects for operations like *create* or *read*.
+
+* Persistence options enum value (`SEPersistenceServiceSaveOptions`) is taken by every method that modifies the data. There are 3 possible values:
+  * `SEPersistenceServiceDontSave` leads to any changes to not be saved. The changes are kept in the context and may be persisted later (explicitly or as part of another operation) or reverted.
+  * `SEPersistenceServiceSaveCurrentOnly` causes the changes to be saved in the context that backs the service, but does not propagate the changes further (to a a context it is nested in or to a persistent store).
+  * `SEPersistenceServiceSaveAndPersist` causes the changes to be saved to the context that backs the service and then all the way to persistent store.
 
 * Persistence service interface is defined in the `SEPersistenceService` protocol, the implementation is provided by the `SEPersistenceServiceImpl` class.
 
@@ -243,10 +252,36 @@ If explicit nested Managed Object Contexts are needed, there are methods to crea
 - (nonnull NSManagedObjectContext *)createChildContextWithMainQueueConcurrency;
 - (nonnull NSManagedObjectContext *)createChildContextWithPrivateQueueConcurrency;
 ```
-**Note:** a child persistence service instance is initialized only when its parent is initialized.
+**Note:** a child persistence service instance is considered initialized only when its parent is initialized.
 
 #### Creating Records
-
+There are two ways to create records with Persistence Service: individually or by transforming objects.
+* Creating an individual record requires an object class (which **must** be a subclass of `NSManagedObject`) and an initializer block which should assign initial values to the newly created object. The method accept two additional parameters: `obtainPermanentId` determines if permanent ID should be obtained when creating an object in case it is needed for future reference, otherwise a temporary ID will be assigned to the object until it is persisted; `saveOptions` define how the result of the operation is persisted (see [basics](../master/README.md#persistence-service-basics) for details).
+**Note:** Initializer is invoked on the managed context queue.
+  * Asynchronous:
+  ```objective-c
+  [_persistenceService createObjectOfType:[MyManagedObject class] obtainPermanentId:NO initializer:^(MyManagedObject * _Nonnull instance) {
+    // Initializing the newly created instance, for example assign a couple of fields
+    instance.field1 = @"Value 1";
+    instance.field2 = 2;
+  } saveOptions:SEPersistenceServiceSaveAndPersist success:^{
+    // handling successful object creation
+  } failure:^(NSError * _Nonnull error) {
+    // handling failure
+  } completionQueue:dispatch_get_global_queue(QOS_CLASS_BACKGROUND, 0)];
+  ```
+  * Synchronous:
+  ```objective-c
+  NSError *error = nil;
+  BOOL result = [_persistenceService createAndWaitObjectOfType:[MyManagedObject class] obtainPermanentId:NO initializer:^(MyManagedObject * _Nonnull instance) {
+    // Initializing the newly created instance, for example assign a couple of fields
+    instance.field1 = @"Value 1";
+    instance.field2 = 2;
+  } saveOptions:SEPersistenceServiceSaveAndPersist error:&error];
+  ```
+  
+  * Creating records by transforming objects is an easy way to create any number of objects of the same type from other objects (usually non-managed).
+  
 #### Fetching Records
 
 #### Transforms
