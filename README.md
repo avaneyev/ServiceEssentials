@@ -280,15 +280,36 @@ There are two ways to create records with Persistence Service: individually or b
   } saveOptions:SEPersistenceServiceSaveAndPersist error:&error];
   ```
   
-  * Creating records by transforming objects is an easy way to create any number of objects of the same type from other objects (usually non-managed).
+* Creating records by transforming objects is an easy way to create any number of objects of the same type from other objects (usually non-managed). Transforms take in an array of objects to transform and an initializer block that takes in an individual original object and its managed counterpart that is being created. Initializer block is invoked once for each object in the array.
+  * Asynchronous:
+  ```objective-c
+  NSArray *people = @[ @"Alice", @"Bob", @"Carl" ];
+  [_persistenceService createObjectOfType:[Person class] byTransformingObjects:people withTransform:^(NSString * _Nonnull name, Person * _Nonnull instance) {
+    // Initializing the newly created instance, for example assign a field.
+    instance.name = name;
+  } saveOptions:SEPersistenceServiceSaveAndPersist success:^{
+    // handling successful object creation
+  } failure:^(NSError * _Nonnull error) {
+    // handling failure
+  } completionQueue:dispatch_get_main_queue()];
+  ```
+  * Synchronous:
+  ```objective-c
+  NSError *error = nil;
+  NSArray *tags = @[ @"AAA1111", @"BBB2222", @"CCC3333" ];
+  BOOL result = [_persistenceService createAndWaitObjectOfType:[Vehicle class] byTransformingObjects:tags withTransform:^(NSString * _Nonnull tag, Vehicle * _Nonnull instance) {
+    // Initializing the newly created instance, for example assign a field.
+    instance.tag = tag;
+  } saveOptions:SEPersistenceServiceSaveAndPersist error:&error];
+  ```
   
 #### Fetching Records
-
-#### Transforms
 
 #### Updating Records
 
 #### Deleting Records
+
+#### Explicitly Committing or Reverting Changes
 
 ### Service-Oriented Approach
 *Coming up*
