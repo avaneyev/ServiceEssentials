@@ -18,6 +18,7 @@ That's it!
 
 ### Service Locator
 Service Locator is a dependency injection container. It has two main features: register a dependency and resolve a dependency. All service identification is based on protocols.
+Service Locator is implemented by the `SEServiceLocator` class.
 #### Registering a dependency:
 There are numerous ways to register a dependency, which could be used in different situations.
 
@@ -69,6 +70,8 @@ Features include:
 * Support for multiple MIME types; support for custom MIME type handlers coming up;
 * Reachability tracking;
 * Basic support for environment switching.
+
+Data Request Service interface is defined in the `SEDataRequestService` protocol, the implementation is provided by the `SEDataRequestServiceImpl` class.
 
 #### Getting started with Data Request Service
 Data request service requires an Environment Service - an object that implements `SEEnvironmentService` protocol. The only requirements to that object are that it returns a valid base URL for network requests and posts a notification if an environment changes. 
@@ -163,7 +166,9 @@ id<SEDataRequestCustomizer> request = [builder POST:@"endpoint_path" success:^(i
 [request setHTTPHeader:@"Header-value" forkey:@"Header-Name"];
 ```
 * Set request body
+```objective-c
 [request setBodyParameters:@{ @"parameter": @"value" }];
+```
 * Attach multipart content
 There are a few ways to attach multipart content, depending on content type.
 For arbitrary data:
@@ -192,7 +197,119 @@ First version determines how to send a request (as an upload or not) on its own.
 Upload requests are only supported for methods that have body (`POST` and `PUT`), and theoretically can be used with a background session.
 
 ### Persistence Service
-*Coming up*
+Persistence Service is a generic service for storing data in Core Data. It does most of the heavy lifting when performing CRUD operations (create, read, update, delete).
+Features include:
+* Simple methods for one-line CRUD operations;
+* Synchronous and asynchronous versions;
+* [Multiple contexts through hierarchical service instances](../master/README.md#hierarchical-instances);
+* Customizable update propagation;
+* [Transforms](../master/README.md#transforms).
+
+#### Persistence Service basics
+* Persistence Service instances correspond to Managed Object Contexts and are hierarchical same way as Managed Object Contexts are. Root instance is backed by a context that is associated with a persistent store and child instances are backed by nexted contexts and may be used for main queue operations or worker contexts.
+
+* All methods that manipulate records have 2 versions: synchronous and asynchronous. 
+  * Asynchronous version takes a pair of callbacks (`success` and `failure`) and a queue that will be used to invoke the callbacks. 
+  * Synchronous version has a word `Wait` in the method name to highlight the fact that it will block the current thread and wait until the method completes. It returns `YES` if the operation succeeds or `NO` if it fails. In case of failure an error may be returned to the autoreleasing `error` parameter. For an example, see [Creating records](../master/README.md#creating-records)
+
+* *Transforms* are a way of preventing Managed Objects from travelling across different components of the application. Using Managed Objects across the application usually implies the complexity of managing object mutability, their belonging to different contexts and non-trivial concurrency model. An alternative to that is to use transient (and preferrably read-only) objects across the application, loading data from managed objects to transient objects and storing transient object as managed. Simply put, *Transforms* are a single point of conversion between managed and transient objects for operations like *create* or *read*.
+
+* Persistence options enum value (`SEPersistenceServiceSaveOptions`) is taken by every method that modifies the data. There are 3 possible values:
+  * `SEPersistenceServiceDontSave` leads to any changes to not be saved. The changes are kept in the context and may be persisted later (explicitly or as part of another operation) or reverted.
+  * `SEPersistenceServiceSaveCurrentOnly` causes the changes to be saved in the context that backs the service, but does not propagate the changes further (to a a context it is nested in or to a persistent store).
+  * `SEPersistenceServiceSaveAndPersist` causes the changes to be saved to the context that backs the service and then all the way to persistent store.
+
+* Persistence service interface is defined in the `SEPersistenceService` protocol, the implementation is provided by the `SEPersistenceServiceImpl` class.
+
+#### Initialization
+There are 2 ways to initialize a root persistence service.
+First uses a *managed object model* object:
+```objective-c
+- (nonnull instancetype)initWithDataModel:(nonnull NSManagedObjectModel *)dataModel storePath:(nonnull NSString *)storePath;
+```
+Second uses a *managed object model name*:
+```objective-c
+- (nonnull instancetype)initWithDataModelName:(nonnull NSString *)dataModelName storePath:(nonnull NSString *)storePath;
+```
+The first is most useful when a model is created at runtime in memory, the second is for loading the managed object model files (`*.momd`).
+Here's an example:
+```objective-c
+NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+NSString *documentsDirectory = [paths objectAtIndex:0];
+NSString *coreDataPath = [documentsDirectory stringByAppendingPathComponent:@"MyDataModel.sqlite"];
+SEPersistenceServiceImpl *persistenceService = [[SEPersistenceServiceImpl alloc] initWithDataModelName:@"MyDataModel" storePath:coreDataPath];
+```
+**Note:** the persistent service initializes asynchronously to avoid blocking the calling thread. The initialization may be time consuming, since it may need to create or migrate the physical store. When the service is initialized and ready to be used, `isInitialized` flag is set to `YES`. Performing any operations on an uninitialized service causes an exception.
+
+There are a couple of methods to create child service instances, first creates a service backed by a main queue context and second creates a service backed by a private queue:
+```objective-c
+- (nonnull id<SEPersistenceService>)createChildPersistenceServiceWithMainQueueConcurrency;
+- (nonnull id<SEPersistenceService>)createChildPersistenceServiceWithPrivateQueueConcurrency;
+```
+
+If explicit nested Managed Object Contexts are needed, there are methods to create them as well:
+```objective-c
+- (nonnull NSManagedObjectContext *)createChildContextWithMainQueueConcurrency;
+- (nonnull NSManagedObjectContext *)createChildContextWithPrivateQueueConcurrency;
+```
+**Note:** a child persistence service instance is considered initialized only when its parent is initialized.
+
+#### Creating Records
+There are two ways to create records with Persistence Service: individually or by transforming objects.
+* Creating an individual record requires an object class (which **must** be a subclass of `NSManagedObject`) and an initializer block which should assign initial values to the newly created object. The method accept two additional parameters: `obtainPermanentId` determines if permanent ID should be obtained when creating an object in case it is needed for future reference, otherwise a temporary ID will be assigned to the object until it is persisted; `saveOptions` define how the result of the operation is persisted (see [basics](../master/README.md#persistence-service-basics) for details).
+**Note:** Initializer is invoked on the managed context queue.
+  * Asynchronous:
+  ```objective-c
+  [_persistenceService createObjectOfType:[MyManagedObject class] obtainPermanentId:NO initializer:^(MyManagedObject * _Nonnull instance) {
+    // Initializing the newly created instance, for example assign a couple of fields
+    instance.field1 = @"Value 1";
+    instance.field2 = 2;
+  } saveOptions:SEPersistenceServiceSaveAndPersist success:^{
+    // handling successful object creation
+  } failure:^(NSError * _Nonnull error) {
+    // handling failure
+  } completionQueue:dispatch_get_global_queue(QOS_CLASS_BACKGROUND, 0)];
+  ```
+  * Synchronous:
+  ```objective-c
+  NSError *error = nil;
+  BOOL result = [_persistenceService createAndWaitObjectOfType:[MyManagedObject class] obtainPermanentId:NO initializer:^(MyManagedObject * _Nonnull instance) {
+    // Initializing the newly created instance, for example assign a couple of fields
+    instance.field1 = @"Value 1";
+    instance.field2 = 2;
+  } saveOptions:SEPersistenceServiceSaveAndPersist error:&error];
+  ```
+  
+* Creating records by transforming objects is an easy way to create any number of objects of the same type from other objects (usually non-managed). Transforms take in an array of objects to transform and an initializer block that takes in an individual original object and its managed counterpart that is being created. Initializer block is invoked once for each object in the array.
+  * Asynchronous:
+  ```objective-c
+  NSArray *people = @[ @"Alice", @"Bob", @"Carl" ];
+  [_persistenceService createObjectOfType:[Person class] byTransformingObjects:people withTransform:^(NSString * _Nonnull name, Person * _Nonnull instance) {
+    // Initializing the newly created instance, for example assign a field.
+    instance.name = name;
+  } saveOptions:SEPersistenceServiceSaveAndPersist success:^{
+    // handling successful object creation
+  } failure:^(NSError * _Nonnull error) {
+    // handling failure
+  } completionQueue:dispatch_get_main_queue()];
+  ```
+  * Synchronous:
+  ```objective-c
+  NSError *error = nil;
+  NSArray *tags = @[ @"AAA1111", @"BBB2222", @"CCC3333" ];
+  BOOL result = [_persistenceService createAndWaitObjectOfType:[Vehicle class] byTransformingObjects:tags withTransform:^(NSString * _Nonnull tag, Vehicle * _Nonnull instance) {
+    // Initializing the newly created instance, for example assign a field.
+    instance.tag = tag;
+  } saveOptions:SEPersistenceServiceSaveAndPersist error:&error];
+  ```
+  
+#### Fetching Records
+
+#### Updating Records
+
+#### Deleting Records
+
+#### Explicitly Committing or Reverting Changes
 
 ### Service-Oriented Approach
 *Coming up*
