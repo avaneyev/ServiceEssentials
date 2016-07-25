@@ -201,9 +201,9 @@ Persistence Service is a generic service for storing data in Core Data. It does 
 Features include:
 * Simple methods for one-line CRUD operations;
 * Synchronous and asynchronous versions;
-* [Multiple contexts through hierarchical service instances](../master/README.md#hierarchical-instances);
+* Multiple contexts through hierarchical service instances;
 * Customizable update propagation;
-* [Transforms](../master/README.md#transforms).
+* Transforms.
 
 #### Persistence Service basics
 * Persistence Service instances correspond to Managed Object Contexts and are hierarchical same way as Managed Object Contexts are. Root instance is backed by a context that is associated with a persistent store and child instances are backed by nexted contexts and may be used for main queue operations or worker contexts.
