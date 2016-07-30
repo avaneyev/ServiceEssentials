@@ -303,9 +303,96 @@ There are two ways to create records with Persistence Service: individually or b
   } saveOptions:SEPersistenceServiceSaveAndPersist error:&error];
   ```
   
-#### Fetching Records
+#### Fetching Records (Read-Only)
+There are three ways to read the data provided by the Persistence Service: fetch-transform, fetch with manual processing, and fetch by IDs with manual processing.
+**Warning:** Managed objects that are sent to processing blocks are mutable (as normal managed objects), but the service is going to make best effort to detect if objects were modified, and will raise an error in that case. Methods capble of fetching and updating records should be used if objects need to be modified. See [Updating Records](../master/README.md#updating-records-fetch-for-writing).
+* *Fetch-transform* is the opposite of create transform. It allows fetching records and simultaneously transforming them to objects of a different kind so that they have no relation to the managed store and can be used across the application. Fetch-transform takes in an object class (which **must** be a subclass of `NSManagedObject`), optional fetch parameters, and a transform block which takes in an object of requested class and returns a transformed object. Transform is invoked for each fetched object on the managed context queue. The result of the operation is an array of transformed objects.
+  * Asynchronous:
+  ```objective-c
+  // Create fetch parameters with a predicate
+  NSPredicate *predicate = [NSPredicate predicateWithFormat:@"...", ];
+  SEFetchParameters *parameters = [SEFetchParameters fetchParametersWithPredicate:predicate];
+  // Suppose there is a managed object class Person (a subclass of NSManagedObject),
+  // and for each person we need a FullName object (not managed, subclass of NSObject),
+  // which consists of first name and last name.
+  // This example shows that a transform can be to any kind of object, not just strings or numbers.
+  [_persistenceService fetchTransformObjectsOfType:[Person class] fetchParameters:parameters transform:^id _Nonnull(Person * _Nonnull person) {
+    return [[FullName alloc] initWithFirstName:person.firstName lastName:person.lastName];
+  } success:^(NSArray<FullName *> * _Nonnull results) {
+    // handle the results, they are transformed objects at this point
+  } failure:^(NSError * _Nonnull error) {
+    // handle an error
+  } completionQueue:dispatch_get_global_queue(QOS_CLASS_UTILITY, 0)];
+  ```
 
-#### Updating Records
+  * Synchronous:
+  ```objective-c
+  // Create fetch parameters
+  SEFetchParameters *parameters = ...;
+  NSError *error = nil;
+  NSArray<FullName *> *results = [_persistenceService fetchAndWaitTransformObjectsOfType:[Person class] fetchParameters:parameters transform:^id _Nonnull(Person * _Nonnull person) {
+    return [[FullName alloc] initWithFirstName:person.firstName lastName:person.lastName];
+  } error:&error];
+  ```
+  
+* Fetch with manual processing takes in an object class, an optional fetch parameters and a block for processing results, but, unlike fetch-transform, the block gets an array of managed object (all fetch results), and those results may be processed as needed.
+  * Asynchronous:
+  ```objective-c
+  // For example, we need the earliest manufacture year of all cars satisfying a predicate 
+  NSPredicate *predicate = [NSPredicate predicateWithFormat:@"...", ];
+  SEFetchParameters *parameters = [SEFetchParameters fetchParametersWithPredicate:predicate];
+  __block NSInteger earliestYear = MAX_INT;
+  [_persistenceService fetchReadOnlyObjectsOfType:[Car class] fetchParameters:parameters fetchedObjectProcessor:^(NSArray<Car *> * _Nonnull cars) {
+    for (Car *car in cars) 
+    {
+      if (car.modelYear < earliestYear) earliestYear = car.modelYear;
+    }
+  } success:^() {
+    // handle the success, there are no explicit results, only what was captured in fetch processor.
+    NSLog(@"Earliest year a car was made: %li", (long)earliestYear);
+  } failure:^(NSError * _Nonnull error) {
+    // handle an error
+  } completionQueue:dispatch_get_main_queue()];
+  ```
+
+  * Synchronous:
+  ```objective-c
+  // For example, need a total number of cars satisfying a predicate
+  NSPredicate *predicate = [NSPredicate predicateWithFormat:@"...", ];
+  SEFetchParameters *parameters = [SEFetchParameters fetchParametersWithPredicate:predicate];
+  __block NSUInteger count = 0;
+  NSError *error = nil;
+  BOOL result = [_persistenceService fetchReadOnlyAndWaitObjectsOfType:[Car class] fetchParameters:parameters fetchedObjectProcessor:^(NSArray<Car *> * _Nonnull cars) {
+    count = cars.count;
+  } error:&error];
+  ```
+  
+* Fetch by IDs is similar to other kinds of fetch, but instead of taking in an object class and fetch parameters it takes in a list of object IDs. 
+  * Asynchronous:
+  ```objective-c
+  // Suppose there are two objects that need to be fetched:
+  NSManagedObjectID *firstObject = ...;
+  NSManagedObjectID *secondObject = ...;
+  [_persistenceService fetchReadOnlyObjectsByIds:@[ firstObject, secondObject ] fetchedObjectProcessor:^(NSArray<NSManagedObject *> * _Nonnull objects) {
+    // do what's needed with the objects.
+  } success:^() {
+    // handle the success, there are no explicit results, only what was captured in fetch processor.
+  } failure:^(NSError * _Nonnull error) {
+    // handle an error
+  } completionQueue:dispatch_get_main_queue()];
+  ```
+
+  * Synchronous:
+  ```objective-c
+  NSManagedObjectID *firstObject = ...;
+  NSManagedObjectID *secondObject = ...;
+  NSError *error = nil;
+  BOOL result = [_persistenceService fetchReadOnlyAndWaitObjectsByIds:@[ firstObject, secondObject ] fetchedObjectProcessor:^(NSArray<NSManagedObject *> * _Nonnull objects) {
+    // do what's needed with the objects.
+  } error:&error];
+  ```
+
+#### Updating Records (Fetch for Writing)
 
 #### Deleting Records
 
