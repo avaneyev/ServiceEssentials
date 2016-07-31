@@ -448,8 +448,62 @@ There are two ways to select records for updating - with a query and with a list
   ```
 
 #### Deleting Records
+Deleting records can be done by query or by a list of IDs, same way as fetch absent processing blocks.
+* By query:
+  * Asynchronous:
+  ```objective-c
+  SEFetchParameters *parameters = [SEFetchParameters ...];
+  [_persistenceService deleteObjectsOfType:[Person class] fetchParameters:parameters saveOptions:SEPersistenceServiceSaveAndPersist success:^() { ... } failure:^(NSError * _Nonnull error) { ... } completionQueue:dispatch_get_main_queue()]];
+  ```
+  
+  * Synchronous:
+  ```objective-c
+  SEFetchParameters *parameters = [SEFetchParameters ...];
+  NSError *error = nil;
+  BOOL result = [_persistenceService deleteObjectsAndWaitOfType:[Person class] fetchParameters:nil saveOptions:SEPersistenceServiceSaveAndPersist error:&error];
+  ```
+  
+* By list of object IDs:
+  * Asynchronous:
+  ```objective-c
+  // Don't specify any of the callbacks or a queue. 
+  // This is a "submit and forget" kind of request, where request is put on the queue and the execution returns immediately.
+  NSManagedObjectID *objectId = ...;
+  [_persistenceService deleteObjectsByIds:@[ objectId ] saveOptions:SEPersistenceServiceSaveAndPersist success:nil failure:nil completionQueue:nil];
+  ```
+  * Synchronous:
+  ```objective-c
+  NSError *error = nil;
+  BOOL result = [_persistenceService deleteObjectsAndWaitByIds:@[ objectId ] saveOptions:SEPersistenceServiceSaveAndPersist error:&error];  
+  ```
 
 #### Explicitly Committing or Reverting Changes
+Each mutating operation specifies a way its changes should be persisted. That makes persistence very flexible and performant.
+For example:
+* Transactions consisting of a number of related operations are possible. Operations should be performed with no persistence, and explicitly committed in the end. If one of the operations fails, they can all be reverted.
+* Worker instances can perform and persist changes locally and periodically submit them to persistent store.
+* Critical operation results may me persisted all the way to a backing store. The operation will not succeed until the change makes it all the way to the store.
+
+##### Saving changes:
+  * Asynchronous:
+  ```objective-c
+  [_persistenceService saveAllWithOptions:SEPersistenceServiceSaveAndPersist success:^{ ... } failure:^(NSError * _Nonnull error) { ... } completionQueue:dispatch_get_main_queue()];
+  ```
+  * Synchronous:
+  ```objective-c
+  NSError *error = nil;
+  BOOL result = [_persistenceService saveAllAndWaitWithOptions:SEPersistenceServiceSaveAndPersist error:&error];  
+  ```
+  
+##### Reverting changes
+  * Asynchronous:
+  ```objective-c
+  [_persistenceService rollbackWithCompletion:^{ ... } completionQueue:dispatch_get_main_queue()];
+  ```
+  * Synchronous:
+  ```objective-c
+  [_persistenceService rollbackAndWait];  
+  ```
 
 ### Service-Oriented Approach
 *Coming up*
