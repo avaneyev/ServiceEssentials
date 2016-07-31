@@ -393,6 +393,12 @@ There are three ways to read the data provided by the Persistence Service: fetch
   ```
 
 #### Updating Records (Fetch for Writing)
+Updating records is very similar to reading them. The difference is that there is no transform - only manual update is available - and preocessing blocks now have a return value that determines how the changes should be persisted.
+
+There are two ways to select records for updating - with a query and with a list of record IDs.
+* Updating records with a query takes the same parameters as read-only fetch does - object class and optional query parameters.
+  * Asynchronous:
+
 
 #### Deleting Records
 
