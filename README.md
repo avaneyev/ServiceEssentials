@@ -486,10 +486,12 @@ For example:
 
 ##### Saving changes:
   * Asynchronous:
+  
   ```objective-c
   [_persistenceService saveAllWithOptions:SEPersistenceServiceSaveAndPersist success:^{ ... } failure:^(NSError * _Nonnull error) { ... } completionQueue:dispatch_get_main_queue()];
   ```
   * Synchronous:
+  
   ```objective-c
   NSError *error = nil;
   BOOL result = [_persistenceService saveAllAndWaitWithOptions:SEPersistenceServiceSaveAndPersist error:&error];  
@@ -497,10 +499,12 @@ For example:
   
 ##### Reverting changes
   * Asynchronous:
+  
   ```objective-c
   [_persistenceService rollbackWithCompletion:^{ ... } completionQueue:dispatch_get_main_queue()];
   ```
   * Synchronous:
+  
   ```objective-c
   [_persistenceService rollbackAndWait];  
   ```
