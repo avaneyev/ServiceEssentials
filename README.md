@@ -338,15 +338,14 @@ There are three ways to read the data provided by the Persistence Service: fetch
 * Fetch with manual processing takes in an object class, an optional fetch parameters and a block for processing results, but, unlike fetch-transform, the block gets an array of managed object (all fetch results), and those results may be processed as needed.
   * Asynchronous:
   ```objective-c
-  // For example, we need the earliest manufacture year of all cars satisfying a predicate 
+  // For example, we need the earliest manufacture year of all cars satisfying a predicate
   NSPredicate *predicate = [NSPredicate predicateWithFormat:@"...", ];
-  SEFetchParameters *parameters = [SEFetchParameters fetchParametersWithPredicate:predicate];
+  // Create parameters that include the predicate and sort by the year
+  SEFetchParameters *parameters = [SEFetchParameters fetchParametersWithPredicate:predicate sort:@[ [NSSortDescriptor sortDescriptorWithKey:@"modelYear" ascending:YES];
   __block NSInteger earliestYear = MAX_INT;
   [_persistenceService fetchReadOnlyObjectsOfType:[Car class] fetchParameters:parameters fetchedObjectProcessor:^(NSArray<Car *> * _Nonnull cars) {
-    for (Car *car in cars) 
-    {
-      if (car.modelYear < earliestYear) earliestYear = car.modelYear;
-    }
+    Car *earliest = cars.firstObject;
+    earliestYear = earliest ? earliest.modelYear : MAX_INT;
   } success:^() {
     // handle the success, there are no explicit results, only what was captured in fetch processor.
     NSLog(@"Earliest year a car was made: %li", (long)earliestYear);
@@ -393,10 +392,118 @@ There are three ways to read the data provided by the Persistence Service: fetch
   ```
 
 #### Updating Records (Fetch for Writing)
+Updating records is very similar to reading them. The difference is that there is no transform - only manual update is available - and preocessing blocks now have a return value that determines how the changes should be persisted. For available persistence options see [basics](../master/README.md#persistence-service-basics)
+
+There are two ways to select records for updating - with a query and with a list of record IDs.
+* Updating records with a query takes the same parameters as read-only fetch does - object class and optional query parameters.
+  * Asynchronous:
+  ```objective-c
+  SEFetchParameters *parameters = [SEFetchParameters ...];
+  [_persistenceService fetchObjectsOfType:[Car class] fetchParameters:parameters fetchedObjectProcessor:SEPersistenceServiceSaveOptions^(NSArray<Car *> * _Nonnull cars) {
+    for (Car *car in cars) 
+    {
+      car.needsMaintenance = YES;
+    }
+    return SEPersistenceServiceSaveAndPersist;
+  } success:^() {
+    // handle the success, there are no explicit results, only what was captured in fetch processor.
+  } failure:^(NSError * _Nonnull error) {
+    // handle an error
+  } completionQueue:dispatch_get_main_queue()];
+  ```
+
+  * Synchronous:
+  ```objective-c
+  SEFetchParameters *parameters = [SEFetchParameters ...];
+  NSError *error = nil;
+  BOOL result = [_persistenceService fetchAndWaitObjectsOfType:[Car class] fetchParameters:parameters fetchedObjectProcessor:^(NSArray<Car *> * _Nonnull cars) {
+    // Perform the updates.
+  } error:&error];
+  ```
+
+* Updating records with a list of record IDs is also similar to its fetch counterpart. It takes a list of IDs and a processing block.
+  * Asynchronous:
+  ```objective-c
+  // For example, a particular car just underwent maintenance
+  NSManagedObjectID *aCarId = ...;
+  [_persistenceService fetchObjectsByIds:@[ aCarId ] fetchedObjectProcessor:^(NSArray<Car *> * _Nonnull cars) {
+    cars.firstObject.needsMaintenance = NO;
+    return SEPersistenceServiceSaveCurrentOnly;
+  } success:^() {
+    // handle the success, there are no explicit results, only what was captured in fetch processor.
+  } failure:^(NSError * _Nonnull error) {
+    // handle an error
+  } completionQueue:dispatch_get_main_queue()];
+  ```
+
+  * Synchronous:
+  ```objective-c
+  NSManagedObjectID *firstObject = ...;
+  NSManagedObjectID *secondObject = ...;
+  NSError *error = nil;
+  BOOL result = [_persistenceService fetchReadOnlyAndWaitObjectsByIds:@[ firstObject, secondObject ] fetchedObjectProcessor:^(NSArray<NSManagedObject *> * _Nonnull objects) {
+    // make necessary updates
+    return SEPersistenceServiceDontSave;
+  } error:&error];
+  ```
 
 #### Deleting Records
+Deleting records can be done by query or by a list of IDs, same way as fetch absent processing blocks.
+* By query:
+  * Asynchronous:
+  ```objective-c
+  SEFetchParameters *parameters = [SEFetchParameters ...];
+  [_persistenceService deleteObjectsOfType:[Person class] fetchParameters:parameters saveOptions:SEPersistenceServiceSaveAndPersist success:^() { ... } failure:^(NSError * _Nonnull error) { ... } completionQueue:dispatch_get_main_queue()]];
+  ```
+  
+  * Synchronous:
+  ```objective-c
+  SEFetchParameters *parameters = [SEFetchParameters ...];
+  NSError *error = nil;
+  BOOL result = [_persistenceService deleteObjectsAndWaitOfType:[Person class] fetchParameters:nil saveOptions:SEPersistenceServiceSaveAndPersist error:&error];
+  ```
+  
+* By list of object IDs:
+  * Asynchronous:
+  ```objective-c
+  // Don't specify any of the callbacks or a queue. 
+  // This is a "submit and forget" kind of request, where request is put on the queue and the execution returns immediately.
+  NSManagedObjectID *objectId = ...;
+  [_persistenceService deleteObjectsByIds:@[ objectId ] saveOptions:SEPersistenceServiceSaveAndPersist success:nil failure:nil completionQueue:nil];
+  ```
+  * Synchronous:
+  ```objective-c
+  NSError *error = nil;
+  BOOL result = [_persistenceService deleteObjectsAndWaitByIds:@[ objectId ] saveOptions:SEPersistenceServiceSaveAndPersist error:&error];  
+  ```
 
 #### Explicitly Committing or Reverting Changes
+Each mutating operation specifies a way its changes should be persisted. That makes persistence very flexible and performant.
+For example:
+* Transactions consisting of a number of related operations are possible. Operations should be performed with no persistence, and explicitly committed in the end. If one of the operations fails, they can all be reverted.
+* Worker instances can perform and persist changes locally and periodically submit them to persistent store.
+* Critical operation results may me persisted all the way to a backing store. The operation will not succeed until the change makes it all the way to the store.
+
+##### Saving changes:
+  * Asynchronous:
+  ```objective-c
+  [_persistenceService saveAllWithOptions:SEPersistenceServiceSaveAndPersist success:^{ ... } failure:^(NSError * _Nonnull error) { ... } completionQueue:dispatch_get_main_queue()];
+  ```
+  * Synchronous:
+  ```objective-c
+  NSError *error = nil;
+  BOOL result = [_persistenceService saveAllAndWaitWithOptions:SEPersistenceServiceSaveAndPersist error:&error];  
+  ```
+  
+##### Reverting changes
+  * Asynchronous:
+  ```objective-c
+  [_persistenceService rollbackWithCompletion:^{ ... } completionQueue:dispatch_get_main_queue()];
+  ```
+  * Synchronous:
+  ```objective-c
+  [_persistenceService rollbackAndWait];  
+  ```
 
 ### Service-Oriented Approach
 *Coming up*
