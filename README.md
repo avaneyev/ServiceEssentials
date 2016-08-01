@@ -16,6 +16,19 @@ Starting with Service Essentials is easy:
 
 That's it!
 
+### Service-Oriented Approach
+**Service-oriented approach** is a way of representing the MVC application model level as a combination of services and data, where services are active components (they perform operations) and data is passive and only used to be passed around and stored. In a lot of ways services are similar to API endpoints.
+**Services have the following attributes:**
+* _Defined by contract_. A service has a contract (protocol that a service conforms to) and that is the only thing that is needed to consume a service. That is similar to API contract defining a URL, method and parameters.
+* _Discoverable_. A service can be found by its definition. [Service Locator](../master/README.md#service-locator) allows finding a registered implementation for a service contract. That is similar to URL.
+* _Domain-specific_. A service implements a set of functionality that belongs to a certain domain. An application can have multiple domains, such as users, authentication, persistence, as well as those more specific to the application. That is similar to REST URLs and paths that specify different domains of objects and operations.
+* _Stackable_. A service may depend on other services. More specifically, a more specialized service may depend on more generic services. For example, application-specific services may depend on the network stack (data request service) and persistence.
+* _Testable_. Since services are defined by contract and not by implementation, it is easy to substitute real implementations with mocks for unit or integration tests.
+* It is recommended that services are _stateless_ - for example, they query the data and transform it in a domain-specifc way or perform an operation and pass the data further down the stack, which eventually leads to a network request or persistence.
+* It is recommended that data accepted and returned by the services is _immutable_. That makes data thread-safe (since an object cannot be modified it does not need synchronization), reduces the issues of ownership (which object is responsible for handling mutations and how does it detect them), and helps make code more robust and testable (mutations may be hard to debug and even harder to account for in tests; immutable objects are plain and simple).
+
+Service-oriented approach has many benefits. It helps keep complexity under control, improves quality through testability and better organization of the code and is easily understood by most engineers from different backgrounds.
+
 ### Service Locator
 Service Locator is a dependency injection container. It has two main features: register a dependency and resolve a dependency. All service identification is based on protocols.
 Service Locator is implemented by the `SEServiceLocator` class.
@@ -508,9 +521,6 @@ For example:
   ```objective-c
   [_persistenceService rollbackAndWait];  
   ```
-
-### Service-Oriented Approach
-*Coming up*
 
 ### Credits
 * This project uses [OCMock](http://ocmock.org), a great framework for creating mocks in all kinds of tests.
