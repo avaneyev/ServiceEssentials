@@ -243,7 +243,7 @@
     id<SEDataRequestCustomizer> customizer = [self createSimpleBuilderAndPost];
     [customizer setBodyParameters:@{ @"1": @2 }];
     NSError *error = nil;
-    XCTAssertThrows([customizer appendPartWithData:[self createSomeData] name:@"partName" mimeType:SEDataRequestServiceContentTypePlainText error:&error]);
+    XCTAssertFalse([customizer appendPartWithData:[self createSomeData] name:@"partName" mimeType:SEDataRequestServiceContentTypePlainText error:&error]);
 }
 
 - (void)testContentPartsAddDataPart
@@ -322,7 +322,7 @@
     NSError *error = nil;
     id<SEDataRequestCustomizer> customizer = [self createSimpleBuilderAndPost];
 
-    XCTAssertThrows([customizer appendPartWithFileURL:url name:name error:&error]);
+    XCTAssertFalse([customizer appendPartWithFileURL:url name:name error:&error]);
 }
 
 - (void)testContentPartsAddFilePartFileDoesNotExist
@@ -333,7 +333,7 @@
     NSError *error = nil;
     id<SEDataRequestCustomizer> customizer = [self createSimpleBuilderAndPost];
     
-    XCTAssertThrows([customizer appendPartWithFileURL:nonExistentUrl name:name error:&error]);
+    XCTAssertFalse([customizer appendPartWithFileURL:nonExistentUrl name:name error:&error]);
 }
 
 - (void)testContentPartsAddFilePartFileExists

@@ -14,18 +14,11 @@
 #import "SEMultipartRequestContentPart.h"
 #import "SEDataSerializer.h"
 
-#ifdef DEBUG
-#   define INVALID_BUILDER_PARAM(param) THROW_INVALID_PARAM(param, nil);
-#else
-#   define INVALID_BUILDER_PARAM(param) \
-        _invalid = YES;                 \
-        return;
-#endif
+#define INVALID_BUILDER_PARAM(param) THROW_INVALID_PARAM(param, nil);
 
 @implementation SEInternalDataRequestBuilder
 {
     __weak id<SEDataRequestServicePrivate> _dataRequestService;
-    BOOL _invalid;
     
     NSMutableDictionary *_additionalHeaders;
     NSMutableArray *_contentParts;
@@ -43,6 +36,7 @@
     {
         _dataRequestService = dataRequestService;
         _acceptContentType = SEDataRequestAcceptContentTypeJSON;
+        _qualityOfService = SEDataRequestQOSDefault;
     }
     return self;
 }
@@ -75,27 +69,20 @@
 
 - (id<SECancellableToken>)submitAsUpload:(BOOL)asUpload
 {
-    if (_invalid) return nil;
     return [_dataRequestService submitRequestWithBuilder:self asUpload:asUpload];
 }
 
 - (id<SECancellableToken>)submit
 {
-    if (_invalid)
-    {
-        if (_failure != nil)
-        {
-            dispatch_async(_completionQueue, ^{
-                _failure([NSError errorWithDomain:SEErrorDomain code:SEDataRequestServiceRequestBuilderFailure userInfo:@{ NSLocalizedDescriptionKey: @"Request contains invalid parameters!" } ]);
-            });
-        }
-        return nil;
-    }
-    else
-    {
-        BOOL asUpload = self.contentParts != nil;
-        return [self submitAsUpload:asUpload];
-    }
+    BOOL asUpload = self.contentParts != nil;
+    return [self submitAsUpload:asUpload];
+}
+
+- (void)setQualityOfService:(SEDataRequestQualityOfService)qualityOfService
+{
+    SEDataRequestVerifyQOS(qualityOfService);
+    
+    _qualityOfService = qualityOfService;
 }
 
 - (void)setDeserializeClass:(Class)class
@@ -131,12 +118,8 @@
 
 - (void)setHTTPHeader:(NSString *)header forkey:(NSString *)key
 {
-#ifdef DEBUG
     if (header == nil) THROW_INVALID_PARAM(header, nil);
     if (key == nil) THROW_INVALID_PARAM(key, nil);
-#else
-    if (header == nil || key == nil) return;
-#endif
     
     if (_additionalHeaders == nil)
     {
@@ -147,9 +130,7 @@
 
 - (void)setExpectedHTTPCodes:(NSIndexSet *)expectedCodes
 {
-#ifdef DEBUG 
-    if (expectedCodes == nil) THROW_INVALID_PARAM(expectedCodes, nil);
-#endif
+    if (expectedCodes == nil || expectedCodes.count == 0) THROW_INVALID_PARAM(expectedCodes, nil);
     
     _expectedHTTPCodes = [expectedCodes copy];
 }
@@ -158,12 +139,7 @@
 {
     if (_bodyParameters != nil || _contentParts != nil)
     {
-#ifdef DEBUG
         THROW_INCONSISTENCY(@{ NSLocalizedDescriptionKey: @"Cannot set body paramters at this stage." });
-#else
-        _invalid = YES;
-        return;
-#endif
     }
 
     _bodyParameters = [parameters copy];
@@ -174,28 +150,21 @@
     _canSendInBackground = @(canSendInBackground);
 }
 
-- (BOOL) checkMultipartRequestPossibleOrError: (NSError * _Nullable __autoreleasing *)error
+- (BOOL)checkMultipartRequestPossibleOrError: (NSError * _Nullable __autoreleasing *)error
 {
     if (_bodyParameters != nil || _contentEncoding != nil)
     {
         NSDictionary *info = @{ NSLocalizedDescriptionKey: @"Cannot add multipart content to a request that has body or custom content type." };
-#ifdef DEBUG
-        THROW_INCONSISTENCY(info);
-#else
-        _invalid = YES;
         if (error != nil) *error = [NSError errorWithDomain:SEErrorDomain code:SEDataRequestServiceRequestBuilderFailure userInfo:info];
         return NO;
-#endif
     }
     return YES;
 }
 
 - (BOOL)appendPartWithData:(NSData *)data name:(NSString *)name fileName:(NSString *)fileName mimeType:(NSString *)mimeType error:(NSError * _Nullable __autoreleasing *)error
 {
-#ifdef DEBUG
     if (data == nil) THROW_INVALID_PARAM(data, nil);
     if (name == nil) THROW_INVALID_PARAM(name, nil);
-#endif
     
     if (![self checkMultipartRequestPossibleOrError:error]) return NO;
     
@@ -221,13 +190,7 @@
 {
     if (json == nil)
     {
-#ifdef DEBUG
         THROW_INVALID_PARAM(json, nil);
-#else
-        _invalid = YES;
-        if (error != nil) *error = [NSError errorWithDomain:SEErrorDomain code:SEDataRequestServiceRequestBuilderFailure userInfo:@{ NSLocalizedDescriptionKey: @"JSON parameter is invalid" }];
-#endif
-        
     }
     
     if (![self checkMultipartRequestPossibleOrError:error]) return NO;
@@ -249,12 +212,8 @@
     if (![fileUrl isFileURL])
     {
         NSDictionary *info = @{ NSLocalizedDescriptionKey: @"Incorrect file URL." };
-#ifdef DEBUG
-        THROW_INCONSISTENCY(info);
-#else
         if (error != nil) *error = [NSError errorWithDomain:SEErrorDomain code:SEDataRequestServiceRequestBuilderFailure userInfo:info];
         return NO;
-#endif
     }
     
     BOOL isDirectory = NO;
@@ -263,12 +222,8 @@
     if (!fileExists || isDirectory)
     {
         NSDictionary *info = @{ NSLocalizedDescriptionKey: @"File does not exist or is a directory." };
-#ifdef DEBUG
-        THROW_INCONSISTENCY(info);
-#else
         if (error != nil) *error = [NSError errorWithDomain:SEErrorDomain code:SEDataRequestServiceRequestBuilderFailure userInfo:info];
         return NO;
-#endif
     }
     
     NSDictionary *fileAttributes = [[NSFileManager defaultManager] attributesOfItemAtPath:path error:error];
@@ -276,12 +231,8 @@
     if (fileAttributes == nil || length == nil || length.longLongValue == 0)
     {
         NSDictionary *info = @{ NSLocalizedDescriptionKey: @"File attributes cannot be obtained." };
-#ifdef DEBUG
-        THROW_INCONSISTENCY(info);
-#else
         if (error != nil) *error = [NSError errorWithDomain:SEErrorDomain code:SEDataRequestServiceRequestBuilderFailure userInfo:info];
         return NO;
-#endif
     }
     
     
@@ -300,19 +251,11 @@
 {
     if (_method != nil)
     {
-#ifdef DEBUG
         THROW_INCONSISTENCY(nil);
-#else
-        return nil;
-#endif
     }
     
-#ifdef DEBUG
     if (path == nil) THROW_INVALID_PARAM(path, nil);
     if (success == nil) THROW_INVALID_PARAM(success, nil);
-#else
-    if (path == nil || success == nil) return nil;
-#endif
     
     _method = method;
     _path = path;

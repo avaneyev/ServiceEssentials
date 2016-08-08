@@ -750,6 +750,7 @@
 				HEADER_SEARCH_PATHS = "";
 				INFOPLIST_FILE = ServiceEssentialsTests/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks $(FRAMEWORK_SEARCH_PATHS)";
+				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.service-essentials.ServiceEssentialsTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -766,6 +767,7 @@
 				HEADER_SEARCH_PATHS = "";
 				INFOPLIST_FILE = ServiceEssentialsTests/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks $(FRAMEWORK_SEARCH_PATHS)";
+				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.service-essentials.ServiceEssentialsTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -822,6 +824,7 @@
 				D5EED1911D20B678009DCDDD /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
