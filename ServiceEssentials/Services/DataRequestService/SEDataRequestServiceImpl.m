@@ -95,9 +95,9 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
     
     NSMutableDictionary<id<SECancellableToken>, SEInternalDataRequest *> *_internalRequestsByKey;
     NSMutableDictionary<NSNumber *, SEInternalDataRequest *> *_internalRequestsByTask;
-    pthread_mutex_t _lock;
+    pthread_mutex_t _requestLock;
     
-    NSDictionary *_dataSerializers;
+    NSDictionary<NSString *, __kindof SEDataSerializer *> *_dataSerializers;
     SEDataSerializer *_defaultSerializer;
     
     NSString *_userAgent;
@@ -110,7 +110,7 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
 #endif
 }
 
-- (instancetype)initWithEnvironmentService:(id<SEEnvironmentService>)environmentService sessionConfiguration:(NSURLSessionConfiguration *)configuration pinningType:(SEDataRequestCertificatePinningType)certificatePinningType applicationBackgroundDefault:(BOOL)backgroundDefault
+- (instancetype)initWithEnvironmentService:(id<SEEnvironmentService>)environmentService sessionConfiguration:(NSURLSessionConfiguration *)configuration pinningType:(SEDataRequestCertificatePinningType)certificatePinningType applicationBackgroundDefault:(BOOL)backgroundDefault serializers:(NSDictionary<NSString *,__kindof SEDataSerializer *> *)serializers
 {
     if (environmentService == nil) THROW_INVALID_PARAMS(nil);
     
@@ -130,18 +130,26 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
         
         _internalRequestsByKey = [[NSMutableDictionary alloc] initWithCapacity:1];
         _internalRequestsByTask = [[NSMutableDictionary alloc] initWithCapacity:1];
-        pthread_mutex_init(&_lock, NULL);
+        pthread_mutex_init(&_requestLock, NULL);
         
         _defaultSerializer = [SEDataSerializer new];
-        SEDataSerializer *plainTextDeserializer = [SEPlainTextSerializer new];
+        
+        if (serializers != nil)
+        {
+            _dataSerializers = [serializers copy];
+        }
+        else
+        {
+            SEDataSerializer *plainTextDeserializer = [SEPlainTextSerializer new];
 
-        _dataSerializers = @{
-                             SEDataRequestServiceContentTypeJSON        : [SEJSONDataSerializer new],
-                             SEDataRequestServiceContentTypePlainText   : plainTextDeserializer,
-                             SEDataRequestServiceContentTypeTextHTML    : plainTextDeserializer,
-                             SEDataRequestServiceContentTypeURLEncode   : [SEWebFormSerializer new],
-                             SEDataRequestServiceContentTypeOctetStream : _defaultSerializer
-                             };
+            _dataSerializers = @{
+                                 SEDataRequestServiceContentTypeJSON        : [SEJSONDataSerializer new],
+                                 SEDataRequestServiceContentTypePlainText   : plainTextDeserializer,
+                                 SEDataRequestServiceContentTypeTextHTML    : plainTextDeserializer,
+                                 SEDataRequestServiceContentTypeURLEncode   : [SEWebFormSerializer new],
+                                 SEDataRequestServiceContentTypeOctetStream : _defaultSerializer
+                                 };
+        }
         
         _userAgent = [SEDataRequestServiceImpl userAgentValue];
 
@@ -166,14 +174,31 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
 
 - (instancetype)initWithEnvironmentService:(id<SEEnvironmentService>)environmentService sessionConfiguration:(NSURLSessionConfiguration *)configuration
 {
-    return [self initWithEnvironmentService:environmentService sessionConfiguration:configuration pinningType:SEDataRequestCertificatePinningTypeCertificate applicationBackgroundDefault:NO];
+    return [self initWithEnvironmentService:environmentService sessionConfiguration:configuration pinningType:SEDataRequestCertificatePinningTypeCertificate applicationBackgroundDefault:NO serializers:nil];
+}
+
+- (instancetype)initWithEnvironmentService:(id<SEEnvironmentService>)environmentService sessionConfiguration:(NSURLSessionConfiguration *)configuration pinningType:(SEDataRequestCertificatePinningType)certificatePinningType applicationBackgroundDefault:(BOOL)backgroundDefault
+{
+    return [self initWithEnvironmentService:environmentService sessionConfiguration:configuration pinningType:SEDataRequestCertificatePinningTypeCertificate applicationBackgroundDefault:NO serializers:nil];
 }
 
 - (void)dealloc
 {
+    @try
+    {
+        pthread_mutex_lock(&_requestLock);
+        for (SEInternalDataRequest *request in _internalRequestsByKey.allValues)
+        {
+            [request cancelAndNotifyComplete:NO];
+        }
+    }
+    @finally
+    {
+        pthread_mutex_unlock(&_requestLock);
+    }
     [[NSNotificationCenter defaultCenter] removeObserver:self];
     [_session invalidateAndCancel];
-    pthread_mutex_destroy(&_lock);
+    pthread_mutex_destroy(&_requestLock);
 }
 
 - (void) onWillTerminateApplication: (NSNotification *) notification
@@ -201,7 +226,7 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
     NSURL *newUrl = [_environmentService environmentBaseURL];
     @try
     {
-        pthread_mutex_lock(&_lock);
+        pthread_mutex_lock(&_requestLock);
         if (![newUrl isEqual:_baseURL])
         {
             _baseURL = [_environmentService environmentBaseURL];
@@ -211,7 +236,7 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
     }
     @finally
     {
-        pthread_mutex_unlock(&_lock);
+        pthread_mutex_unlock(&_requestLock);
     }
 }
 
@@ -403,22 +428,22 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
     SEInternalDataRequest *request = nil;
     @try
     {
-        pthread_mutex_lock(&_lock);
+        pthread_mutex_lock(&_requestLock);
         request = [_internalRequestsByKey objectForKey:token];
     }
     @finally
     {
-        pthread_mutex_unlock(&_lock);
+        pthread_mutex_unlock(&_requestLock);
     }
     
-    if (request) [request cancel];
+    if (request) [request cancelAndNotifyComplete:YES];
 }
 
 - (void) completeInternalRequest:(SEInternalDataRequest *)request
 {
     @try
     {
-        pthread_mutex_lock(&_lock);
+        pthread_mutex_lock(&_requestLock);
         [_internalRequestsByKey removeObjectForKey:request.token];
         NSURLSessionTask *task = request.task;
         if (task != nil) [_internalRequestsByTask removeObjectForKey:@(task.taskIdentifier)];
@@ -427,7 +452,7 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
     }
     @finally
     {
-        pthread_mutex_unlock(&_lock);
+        pthread_mutex_unlock(&_requestLock);
     }
 }
 
@@ -519,12 +544,12 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
     SEInternalDataRequest *dataRequest = nil;
     @try
     {
-        pthread_mutex_lock(&_lock);
+        pthread_mutex_lock(&_requestLock);
         dataRequest = [_internalRequestsByTask objectForKey:@(task.taskIdentifier)];
     }
     @finally
     {
-        pthread_mutex_unlock(&_lock);
+        pthread_mutex_unlock(&_requestLock);
     }
  
     if (dataRequest) [dataRequest completeWithError:error];
@@ -535,12 +560,12 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
     SEInternalDataRequest *dataRequest = nil;
     @try
     {
-        pthread_mutex_lock(&_lock);
+        pthread_mutex_lock(&_requestLock);
         dataRequest = [_internalRequestsByTask objectForKey:@(dataTask.taskIdentifier)];
     }
     @finally
     {
-        pthread_mutex_unlock(&_lock);
+        pthread_mutex_unlock(&_requestLock);
     }
     
     if ((dataRequest == nil) || (dataRequest.isCompleted))
@@ -561,12 +586,12 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
     SEInternalDataRequest *dataRequest = nil;
     @try
     {
-        pthread_mutex_lock(&_lock);
+        pthread_mutex_lock(&_requestLock);
         dataRequest = [_internalRequestsByTask objectForKey:@(dataTask.taskIdentifier)];
     }
     @finally
     {
-        pthread_mutex_unlock(&_lock);
+        pthread_mutex_unlock(&_requestLock);
     }
     
     if ((dataRequest != nil) && !dataRequest.isCompleted) [dataRequest receivedData:data];
@@ -577,12 +602,12 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
     SEInternalDataRequest *dataRequest = nil;
     @try
     {
-        pthread_mutex_lock(&_lock);
+        pthread_mutex_lock(&_requestLock);
         dataRequest = [_internalRequestsByTask objectForKey:@(task.taskIdentifier)];
     }
     @finally
     {
-        pthread_mutex_unlock(&_lock);
+        pthread_mutex_unlock(&_requestLock);
     }
     
     if ((dataRequest != nil) && !dataRequest.isCompleted)
@@ -600,12 +625,12 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
     SEInternalDataRequest *dataRequest = nil;
     @try
     {
-        pthread_mutex_lock(&_lock);
+        pthread_mutex_lock(&_requestLock);
         dataRequest = [_internalRequestsByTask objectForKey:@(downloadTask.taskIdentifier)];
     }
     @finally
     {
-        pthread_mutex_unlock(&_lock);
+        pthread_mutex_unlock(&_requestLock);
     }
     
     if ((dataRequest != nil) && !dataRequest.isCompleted)
@@ -619,12 +644,12 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
     SEInternalDataRequest *dataRequest = nil;
     @try
     {
-        pthread_mutex_lock(&_lock);
+        pthread_mutex_lock(&_requestLock);
         dataRequest = [_internalRequestsByTask objectForKey:@(downloadTask.taskIdentifier)];
     }
     @finally
     {
-        pthread_mutex_unlock(&_lock);
+        pthread_mutex_unlock(&_requestLock);
     }
     
     if ((dataRequest != nil) && !dataRequest.isCompleted)
@@ -694,7 +719,7 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
     
     @try
     {
-        pthread_mutex_lock(&_lock);
+        pthread_mutex_lock(&_requestLock);
         [_internalRequestsByKey setObject:internalRequest forKey:internalRequest.token];
         [_internalRequestsByTask setObject:internalRequest forKey:@(dataTask.taskIdentifier)];
     }
@@ -705,7 +730,7 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
     }
     @finally
     {
-        pthread_mutex_unlock(&_lock);
+        pthread_mutex_unlock(&_requestLock);
     }
     
     [dataTask resume];
@@ -976,7 +1001,7 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
     
     @try
     {
-        pthread_mutex_lock(&_lock);
+        pthread_mutex_lock(&_requestLock);
         
         if (_internalRequestsByKey.count > 0)
         {
@@ -987,7 +1012,7 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
     }
     @finally
     {
-        pthread_mutex_unlock(&_lock);
+        pthread_mutex_unlock(&_requestLock);
     }
 }
 
@@ -997,13 +1022,13 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
     
     @try
     {
-        pthread_mutex_lock(&_lock);
+        pthread_mutex_lock(&_requestLock);
         
         [self completeBackgroundTaskIfNeeded];
     }
     @finally
     {
-        pthread_mutex_unlock(&_lock);
+        pthread_mutex_unlock(&_requestLock);
     }
 
 }
@@ -1013,7 +1038,7 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
     NSArray *incompleteTasks = nil;
     @try
     {
-        pthread_mutex_lock(&_lock);
+        pthread_mutex_lock(&_requestLock);
         
         if (_internalRequestsByKey.count > 0)
         {
@@ -1022,12 +1047,12 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
     }
     @finally
     {
-        pthread_mutex_unlock(&_lock);
+        pthread_mutex_unlock(&_requestLock);
     }
     
     if (incompleteTasks != nil)
     {
-        for (SEInternalDataRequest *task in incompleteTasks) [task cancel];
+        for (SEInternalDataRequest *task in incompleteTasks) [task cancelAndNotifyComplete:YES];
     }
 }
 
