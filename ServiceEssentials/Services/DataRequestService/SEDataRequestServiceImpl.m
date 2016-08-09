@@ -96,7 +96,6 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
     NSMutableDictionary<id<SECancellableToken>, SEInternalDataRequest *> *_internalRequestsByKey;
     NSMutableDictionary<NSNumber *, SEInternalDataRequest *> *_internalRequestsByTask;
     pthread_mutex_t _lock;
-    dispatch_queue_t _internalProcessingQueue;
     
     NSDictionary *_dataSerializers;
     SEDataSerializer *_defaultSerializer;
@@ -132,7 +131,6 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
         _internalRequestsByKey = [[NSMutableDictionary alloc] initWithCapacity:1];
         _internalRequestsByTask = [[NSMutableDictionary alloc] initWithCapacity:1];
         pthread_mutex_init(&_lock, NULL);
-        _internalProcessingQueue = dispatch_queue_create("com.service-essentials.DataRequestServiceQueue", DISPATCH_QUEUE_CONCURRENT);
         
         _defaultSerializer = [SEDataSerializer new];
         SEDataSerializer *plainTextDeserializer = [SEPlainTextSerializer new];
