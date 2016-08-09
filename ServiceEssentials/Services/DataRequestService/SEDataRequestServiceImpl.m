@@ -179,7 +179,7 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
 
 - (instancetype)initWithEnvironmentService:(id<SEEnvironmentService>)environmentService sessionConfiguration:(NSURLSessionConfiguration *)configuration pinningType:(SEDataRequestCertificatePinningType)certificatePinningType applicationBackgroundDefault:(BOOL)backgroundDefault
 {
-    return [self initWithEnvironmentService:environmentService sessionConfiguration:configuration pinningType:SEDataRequestCertificatePinningTypeCertificate applicationBackgroundDefault:NO serializers:nil];
+    return [self initWithEnvironmentService:environmentService sessionConfiguration:configuration pinningType:certificatePinningType applicationBackgroundDefault:backgroundDefault serializers:nil];
 }
 
 - (void)dealloc
