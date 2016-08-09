@@ -16,6 +16,15 @@
 
 static NSString *const SEMultipartStreamContentCRLF = @"\r\n";
 
+static inline void SEMultipartRequestContentStreamDescheduleFormRunLoop(CFRunLoopRef runLoop, CFRunLoopSourceRef runLoopSource, NSString *runLoopMode)
+{
+    CFRunLoopSourceInvalidate(runLoopSource);
+    CFRunLoopRemoveSource(runLoop, runLoopSource, (__bridge CFStringRef)runLoopMode);
+    CFRelease(runLoopSource);
+    
+    CFRelease(runLoop);
+}
+
 /** Run Lopp callback context items - equality, hash function and callback itself */
 Boolean SEMultipartStreamRunLoopEqualCallBack(const void *info1, const void *info2) { return info1 == info2; }
 CFHashCode SEMultipartStreamRunLoopHashCallBack(const void *info) { return ((__bridge SEMultipartRequestContentStream *)info).hash; }
@@ -151,7 +160,10 @@ void SEMultipartStreamRunLoopPerformCallBack(void *info);
 
 - (void)dealloc
 {
-    if (_runLoop != NULL) [self removeFromCurrentRunLoop];
+    if (_runLoop != NULL)
+    {
+        SEMultipartRequestContentStreamDescheduleFormRunLoop(_runLoop, _runLoopSource, _runLoopMode);
+    }
     pthread_mutex_destroy(&_lock);
 }
 
@@ -615,12 +627,8 @@ void SEMultipartStreamRunLoopPerformCallBack(void *info);
 
 - (void) removeFromCurrentRunLoop
 {
-    CFRunLoopSourceInvalidate(_runLoopSource);
-    CFRunLoopRemoveSource(_runLoop, _runLoopSource, (__bridge CFStringRef)_runLoopMode);
-    CFRelease(_runLoopSource);
-    _runLoopSource = NULL;
-    
-    CFRelease(_runLoop);
+    SEMultipartRequestContentStreamDescheduleFormRunLoop(_runLoop, _runLoopSource, _runLoopMode);
+    _runLoopSource = NULL;    
     _runLoop = NULL;
     _runLoopMode = nil;
 }

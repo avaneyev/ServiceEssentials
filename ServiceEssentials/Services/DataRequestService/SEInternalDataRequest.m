@@ -112,7 +112,7 @@ static inline void SEDataRequestSendCompletionToService(id<SEDataRequestServiceP
     return _completed != 0;
 }
 
-- (void)cancel
+- (void)cancelAndNotifyComplete:(BOOL)notifyComplete
 {
     // always set 'completed' first, then 'cancelled'
     bool wasCompleted = OSAtomicTestAndSet(COMPLETED_REQUEST_BIT, &_completed);
@@ -120,7 +120,10 @@ static inline void SEDataRequestSendCompletionToService(id<SEDataRequestServiceP
     {
         OSAtomicTestAndSet(CANCELLED_REQUEST_BIT, &_completed);
         [_task cancel];
-        SEDataRequestSendCompletionToService(_requestService, self);
+        if (notifyComplete)
+        {
+            SEDataRequestSendCompletionToService(_requestService, self);
+        }
     }
 }
 

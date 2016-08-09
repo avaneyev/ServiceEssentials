@@ -21,6 +21,17 @@
 #import <ifaddrs.h>
 #import <netdb.h>
 
+#ifdef _SYSTEMCONFIGURATION_H
+static inline void SENetworkReachabilityTrackerStopTracking(SCNetworkReachabilityRef reachability)
+{
+    if (reachability != NULL)
+    {
+        SCNetworkReachabilitySetCallback(reachability, NULL, NULL);
+        CFRelease(reachability);
+    }
+}
+#endif
+
 @interface SENetworkReachabilityTracker ()
 - (void)onUpdateReachabilityFlags: (SCNetworkReachabilityFlags) flags;
 @end
@@ -96,7 +107,7 @@ void NetworkReachabilityCallback(SCNetworkReachabilityRef target, SCNetworkReach
 - (void)dealloc
 {
 #ifdef _SYSTEMCONFIGURATION_H
-    [self stopTracking];
+    SENetworkReachabilityTrackerStopTracking(_networkReachabiilty);
 #endif
 }
 
@@ -156,12 +167,8 @@ void NetworkReachabilityCallback(SCNetworkReachabilityRef target, SCNetworkReach
 
 - (void) stopTracking
 {
-    if (_networkReachabiilty != NULL)
-    {
-        SCNetworkReachabilitySetCallback(_networkReachabiilty, NULL, NULL);
-        CFRelease(_networkReachabiilty);
-        _networkReachabiilty = NULL;
-    }
+    SENetworkReachabilityTrackerStopTracking(_networkReachabiilty);
+    _networkReachabiilty = NULL;
 }
 
 - (void)onUpdateReachabilityFlags: (SCNetworkReachabilityFlags) flags

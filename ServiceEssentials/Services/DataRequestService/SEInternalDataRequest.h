@@ -37,7 +37,7 @@
 
 @property (nonatomic, readonly, assign) BOOL isCompleted;
 
-- (void) cancel;
+- (void) cancelAndNotifyComplete:(BOOL)notifyComplete;
 - (void) completeWithError: (NSError *) error;
 - (void) receivedData: (NSData *) data;
 - (BOOL) receivedURLResponse: (NSURLResponse *) response;
