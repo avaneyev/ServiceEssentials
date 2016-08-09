@@ -21,6 +21,20 @@ typedef enum {
 #endif // ServiceEssentials_DataRequestServicePrivate_h
 
 #import "SEDataRequestServiceImpl.h"
+#import "SETools.h"
+
+static inline void SEDataRequestVerifyQOS(SEDataRequestQualityOfService qualityOfService)
+{
+    if (   qualityOfService != SEDataRequestQOSDefault
+        && qualityOfService != SEDataRequestQOSPriorityBackground
+        && qualityOfService != SEDataRequestQOSPriorityLow
+        && qualityOfService != SEDataRequestQOSPriorityNormal
+        && qualityOfService != SEDataRequestQOSPriorityHigh
+        && qualityOfService != SEDataRequestQOSPriorityInteractive)
+    {
+        THROW_INVALID_PARAM(qualityOfService, @{ NSLocalizedDescriptionKey: @"Unrecognized quality of service (QOS) value." });
+    }
+}
 
 @protocol SECancellableToken;
 @class SEInternalDataRequest;

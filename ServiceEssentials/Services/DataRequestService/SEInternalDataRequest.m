@@ -23,6 +23,16 @@
 #define COMPLETED_REQUEST_BIT       0 // signals that request has been completed
 #define CANCELLED_REQUEST_BIT       1 // signals that request has been cancelled, this bit will also be set by completed callback
 
+static inline void SEDataRequestSendCompletionToService(id<SEDataRequestServicePrivate> service, SEInternalDataRequest *request)
+{
+    if (service)
+    {
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0), ^{
+            [service completeInternalRequest:request];
+        });
+    }
+}
+
 @implementation SEInternalDataRequest
 {
     __weak id<SEDataRequestServicePrivate> _requestService;
@@ -39,14 +49,16 @@
     NSURLResponse *_response;
 }
 
-- (instancetype)initWithSessionTask:(NSURLSessionTask *)task requestService:(id<SEDataRequestServicePrivate>)requestService responseDataClass:(Class)dataClass expectedHTTPCodes:(NSIndexSet *)expectedCodes multipartContents:(SEInternalMultipartContents *)multipartContents downloadParameters:(SEInternalDownloadRequestParameters *)downloadParameters success:(void (^)(id, NSURLResponse *))success failure:(void (^)(NSError *))failure completionQueue:(dispatch_queue_t)completionQueue
+- (instancetype)initWithSessionTask:(NSURLSessionTask *)task requestService:(id<SEDataRequestServicePrivate>)requestService qualityOfService:(SEDataRequestQualityOfService)qualityOfService responseDataClass:(__unsafe_unretained Class)dataClass expectedHTTPCodes:(NSIndexSet *)expectedCodes multipartContents:(SEInternalMultipartContents *)multipartContents downloadParameters:(SEInternalDownloadRequestParameters *)downloadParameters success:(void (^)(id, NSURLResponse *))success failure:(void (^)(NSError *))failure completionQueue:(dispatch_queue_t)completionQueue
 {
     self = [super init];
     if (self)
     {
         _requestService = requestService;
+        
         _expectedHTTPCodes = expectedCodes ?: [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(200, 100)];
         _task = task;
+        _qualityOfService = qualityOfService;
         _dataClass = dataClass;
         _multipartContents = multipartContents;
         _downloadRequestParameters = downloadParameters;
@@ -66,7 +78,31 @@
     if (!wasCompleted)
     {
         [_task cancel];
-        [self sendFailureAndComplete:[NSError errorWithDomain:SEErrorDomain code:SEDataRequestServiceRequestCancelled userInfo:nil] checkBeforeCallback:NO];
+        
+        // cannot do anything that causes a retain of self, need to be very careful
+        // cannot make a block that uses self
+        // cannot make an async block because self will be gone
+        // better to avoid any calls to self at all
+        // call the service method synchronously
+
+        void (^failureBlock)(NSError *) = _failure;
+        NSError *error = [NSError errorWithDomain:SEErrorDomain code:SEDataRequestServiceRequestCancelled userInfo:nil];
+        if (failureBlock)
+        {
+            dispatch_async(_completionQueue, ^{
+                failureBlock(error);
+            });
+        }
+
+        
+#ifdef DEBUG
+        if (_requestService) {
+            NSLog(@"ERROR: the service is not deallocated and request is not complete, this should never happen!");
+        }
+#endif
+        
+        __unsafe_unretained typeof (self) unretainedSelf = self;
+        [_requestService completeInternalRequest:unretainedSelf];
     }
 }
 
@@ -84,7 +120,7 @@
     {
         OSAtomicTestAndSet(CANCELLED_REQUEST_BIT, &_completed);
         [_task cancel];
-        [self sendCompletionBack];
+        SEDataRequestSendCompletionToService(_requestService, self);
     }
 }
 
@@ -125,14 +161,13 @@
     
 #ifdef DEBUG
         // double-ensure
-        if (   _dataClass != nil && ![SEDataRequestServiceImpl canDeserializeToClass:_dataClass])
+        if (_dataClass != nil && ![SEDataRequestServiceImpl canDeserializeToClass:_dataClass])
         {
             error = [NSError errorWithDomain:SEErrorDomain code:SEDataRequestServiceSerializationFailure userInfo:@{ NSLocalizedDescriptionKey: @"FAILURE: incorrect class for deserialization" }];
         }
 #endif
         if (error == nil && _dataClass != nil)
         {
-
             if ([result isKindOfClass:[NSDictionary class]])
             {
                 result = [_dataClass deserializeFromJSON: result];
@@ -197,7 +232,7 @@
         else
         {
             bool wasCompleted = OSAtomicTestAndSet(COMPLETED_REQUEST_BIT, &_completed);
-            if (!wasCompleted) [self sendCompletionBack];
+            if (!wasCompleted) SEDataRequestSendCompletionToService(_requestService, self);
         }
     }
     else
@@ -271,7 +306,7 @@
     bool wasCompleted = OSAtomicTestAndSet(COMPLETED_REQUEST_BIT, &_completed);
     if (wasCompleted) return;
     
-    [self sendCompletionBack];
+    SEDataRequestSendCompletionToService(_requestService, self);
     
     NSURLResponse *response = _response;
     void (^completion)(id, NSURLResponse *) = _success;
@@ -283,14 +318,6 @@
                 completion(result, response);
         });
     }
-}
-
-- (void) sendCompletionBack
-{
-    // this function assumes 'completed' bit has been checked and set
-    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0), ^{
-        [_requestService completeInternalRequest:self];
-    });
 }
 
 - (void) failedWithError: (NSError *) error
@@ -305,7 +332,7 @@
 - (void) sendFailureAndComplete: (NSError *) error checkBeforeCallback: (BOOL) checkBeforeCallback
 {
     // send completion first so that data service can perform the cleanup, then send the callback
-    [self sendCompletionBack];
+    SEDataRequestSendCompletionToService(_requestService, self);
     
     void (^failureBlock)(NSError *) = _failure;
     if (failureBlock)

@@ -9,6 +9,7 @@
 //
 
 @import Foundation;
+#import "SEDataRequestService.h"
 
 @protocol SEDataRequestServicePrivate;
 @protocol SECancellableToken;
@@ -28,10 +29,11 @@
 
 @interface SEInternalDataRequest : NSObject
 
-- (instancetype) initWithSessionTask: (NSURLSessionTask *) task requestService:(id<SEDataRequestServicePrivate>) requestService responseDataClass: (Class) dataClass expectedHTTPCodes:(NSIndexSet *)expectedCodes multipartContents: (SEInternalMultipartContents *) multipartContents downloadParameters: (SEInternalDownloadRequestParameters *) downloadParameters success: (void(^)(id, NSURLResponse *)) success failure: (void (^)(NSError *)) failure completionQueue: (dispatch_queue_t) completionQueue;
+- (instancetype) initWithSessionTask: (NSURLSessionTask *) task requestService:(id<SEDataRequestServicePrivate>) requestService qualityOfService:(SEDataRequestQualityOfService)qualityOfService responseDataClass: (Class) dataClass expectedHTTPCodes:(NSIndexSet *)expectedCodes multipartContents: (SEInternalMultipartContents *) multipartContents downloadParameters: (SEInternalDownloadRequestParameters *) downloadParameters success: (void(^)(id, NSURLResponse *)) success failure: (void (^)(NSError *)) failure completionQueue: (dispatch_queue_t) completionQueue;
 
 @property (nonatomic, readonly, retain) id<SECancellableToken> token;
 @property (nonatomic, readonly, retain) NSURLSessionTask *task;
+@property (nonatomic, readonly, assign) SEDataRequestQualityOfService qualityOfService;
 
 @property (nonatomic, readonly, assign) BOOL isCompleted;
 

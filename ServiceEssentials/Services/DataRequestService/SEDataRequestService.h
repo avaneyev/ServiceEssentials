@@ -60,6 +60,16 @@ typedef enum
     SENetworkReachabilityStatusReachableViaWWAN = 5
 } SENetworkReachabilityStatus;
 
+typedef enum
+{
+    SEDataRequestQOSDefault = QOS_CLASS_UNSPECIFIED,
+    SEDataRequestQOSPriorityBackground = QOS_CLASS_BACKGROUND,
+    SEDataRequestQOSPriorityLow = QOS_CLASS_UTILITY,
+    SEDataRequestQOSPriorityNormal = QOS_CLASS_DEFAULT,
+    SEDataRequestQOSPriorityHigh = QOS_CLASS_USER_INITIATED,
+    SEDataRequestQOSPriorityInteractive = QOS_CLASS_USER_INTERACTIVE
+} SEDataRequestQualityOfService;
+
 @protocol SEDataRequestCustomizer <NSObject>
 /** 
  Finalizes the requests and submits it. This method must be invoked in the end of the building to make the request. 
@@ -70,6 +80,13 @@ typedef enum
 - (nonnull id<SECancellableToken>) submitAsUpload: (BOOL) asUpload;
 /** Convenience shorthand method for `submitAsUpload:`. Will determine how to submit based on parameters. */
 - (nonnull id<SECancellableToken>) submit;
+
+/** 
+ Set request quality of service. If the value is not set or set to SEDataRequestQOSDefault,
+ requests are performed with default priority - that is, default request priority 
+ and parsing on a service's internal queue.
+ */
+- (void) setQualityOfService:(SEDataRequestQualityOfService)qualityOfService;
 
 /** Set class to deserialize the data to. Will deserialize from JSON, mutually exclusive with raw data. */
 - (void) setDeserializeClass: (nonnull Class) class;

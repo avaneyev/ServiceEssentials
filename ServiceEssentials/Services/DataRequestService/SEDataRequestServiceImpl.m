@@ -11,6 +11,7 @@
 #import "SEDataRequestServiceImpl.h"
 
 #include <objc/runtime.h>
+#include <pthread.h>
 #if defined(__IPHONE_OS_VERSION_MIN_REQUIRED)
 @import UIKit;
 #endif
@@ -62,8 +63,23 @@ NSInteger const SEDataRequestServiceRequestBuilderFailure = SEDataRequestService
 
 NSString * _Nonnull const SEDataRequestServiceErrorDeserializedContentKey = @"ErrorDeserializedContentKey";
 
-static NSString * _Nonnull const SEDataRequestServiceBackgroundTaskId = @"com.service-essentials.DataRequestServiceService.background";
+static NSString * _Nonnull const SEDataRequestServiceBackgroundTaskId = @"com.service-essentials.DataRequestService.background";
 
+static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQualityOfService qos)
+{
+    switch (qos) {
+        case SEDataRequestQOSPriorityLow:
+        case SEDataRequestQOSPriorityBackground:
+            return NSURLSessionTaskPriorityLow;
+        case SEDataRequestQOSPriorityHigh:
+        case SEDataRequestQOSPriorityInteractive:
+            return NSURLSessionTaskPriorityHigh;
+        case SEDataRequestQOSDefault:
+        case SEDataRequestQOSPriorityNormal:
+        default:
+            return NSURLSessionTaskPriorityDefault;
+    }
+}
 
 @interface SEDataRequestServiceImpl () <NSURLSessionDelegate, NSURLSessionDataDelegate, NSURLSessionDownloadDelegate, SEDataRequestServicePrivate, SENetworkReachabilityTrackerDelegate>
 @end
@@ -79,7 +95,7 @@ static NSString * _Nonnull const SEDataRequestServiceBackgroundTaskId = @"com.se
     
     NSMutableDictionary<id<SECancellableToken>, SEInternalDataRequest *> *_internalRequestsByKey;
     NSMutableDictionary<NSNumber *, SEInternalDataRequest *> *_internalRequestsByTask;
-    NSLock *_lock;
+    pthread_mutex_t _lock;
     
     NSDictionary *_dataSerializers;
     SEDataSerializer *_defaultSerializer;
@@ -114,7 +130,7 @@ static NSString * _Nonnull const SEDataRequestServiceBackgroundTaskId = @"com.se
         
         _internalRequestsByKey = [[NSMutableDictionary alloc] initWithCapacity:1];
         _internalRequestsByTask = [[NSMutableDictionary alloc] initWithCapacity:1];
-        _lock = [[NSLock alloc] init];
+        pthread_mutex_init(&_lock, NULL);
         
         _defaultSerializer = [SEDataSerializer new];
         SEDataSerializer *plainTextDeserializer = [SEPlainTextSerializer new];
@@ -155,8 +171,9 @@ static NSString * _Nonnull const SEDataRequestServiceBackgroundTaskId = @"com.se
 
 - (void)dealloc
 {
-    [_session invalidateAndCancel];
     [[NSNotificationCenter defaultCenter] removeObserver:self];
+    [_session invalidateAndCancel];
+    pthread_mutex_destroy(&_lock);
 }
 
 - (void) onWillTerminateApplication: (NSNotification *) notification
@@ -184,7 +201,7 @@ static NSString * _Nonnull const SEDataRequestServiceBackgroundTaskId = @"com.se
     NSURL *newUrl = [_environmentService environmentBaseURL];
     @try
     {
-        [_lock lock];
+        pthread_mutex_lock(&_lock);
         if (![newUrl isEqual:_baseURL])
         {
             _baseURL = [_environmentService environmentBaseURL];
@@ -194,7 +211,7 @@ static NSString * _Nonnull const SEDataRequestServiceBackgroundTaskId = @"com.se
     }
     @finally
     {
-        [_lock unlock];
+        pthread_mutex_unlock(&_lock);
     }
 }
 
@@ -302,7 +319,7 @@ static NSString * _Nonnull const SEDataRequestServiceBackgroundTaskId = @"com.se
     {
         NSMutableURLRequest *request = [self createRequestWithMethod:@"GET" authorized:YES url:url data:nil contentType:nil acceptContentType:SEDataRequestAcceptContentTypeData charset:nil];
         
-        return [self createDownloadRequestWithURLRequest:request saveFileAs:saveAsURL expectedHTTPCodes:nil success:success failure:failure progress:progress completionQueue:completionQueue];
+        return [self createDownloadRequestWithURLRequest:request qos:SEDataRequestQOSDefault saveFileAs:saveAsURL expectedHTTPCodes:nil success:success failure:failure progress:progress completionQueue:completionQueue];
     }
 }
 
@@ -359,7 +376,7 @@ static NSString * _Nonnull const SEDataRequestServiceBackgroundTaskId = @"com.se
     
     NSMutableURLRequest *request = [self createRequestWithMethod:@"GET" authorized:NO url:url data:nil contentType:nil acceptContentType:SEDataRequestAcceptContentTypeData charset:nil];
 
-    return [self createDataRequestWithURLRequest:request dataClass:nil expectedHTTPCodes:nil success:success failure:failure completionQueue:completionQueue];
+    return [self createDataRequestWithURLRequest:request qos:SEDataRequestQOSDefault dataClass:nil expectedHTTPCodes:nil success:success failure:failure completionQueue:completionQueue];
 }
 
 - (id<SECancellableToken>)URLDownload:(NSURL *)url parameters:(NSDictionary<NSString *,id> *)parameters saveAs:(NSURL *)saveAsURL success:(void (^)(id _Nullable, NSURLResponse * _Nonnull))success failure:(void (^)(NSError * _Nonnull))failure progress:(void (^)(int64_t, int64_t, int64_t))progress completionQueue:(dispatch_queue_t)completionQueue
@@ -371,7 +388,7 @@ static NSString * _Nonnull const SEDataRequestServiceBackgroundTaskId = @"com.se
     
     NSMutableURLRequest *request = [self createRequestWithMethod:@"GET" authorized:NO url:url data:nil contentType:nil acceptContentType:SEDataRequestAcceptContentTypeData charset:nil];
 
-    return [self createDownloadRequestWithURLRequest:request saveFileAs:saveAsURL expectedHTTPCodes:nil success:success failure:failure progress:progress completionQueue:completionQueue];
+    return [self createDownloadRequestWithURLRequest:request qos:SEDataRequestQOSPriorityLow saveFileAs:saveAsURL expectedHTTPCodes:nil success:success failure:failure progress:progress completionQueue:completionQueue];
 }
 
 #pragma mark - Private interface
@@ -386,12 +403,12 @@ static NSString * _Nonnull const SEDataRequestServiceBackgroundTaskId = @"com.se
     SEInternalDataRequest *request = nil;
     @try
     {
-        [_lock lock];
+        pthread_mutex_lock(&_lock);
         request = [_internalRequestsByKey objectForKey:token];
     }
     @finally
     {
-        [_lock unlock];
+        pthread_mutex_unlock(&_lock);
     }
     
     if (request) [request cancel];
@@ -401,7 +418,7 @@ static NSString * _Nonnull const SEDataRequestServiceBackgroundTaskId = @"com.se
 {
     @try
     {
-        [_lock lock];
+        pthread_mutex_lock(&_lock);
         [_internalRequestsByKey removeObjectForKey:request.token];
         NSURLSessionTask *task = request.task;
         if (task != nil) [_internalRequestsByTask removeObjectForKey:@(task.taskIdentifier)];
@@ -410,7 +427,7 @@ static NSString * _Nonnull const SEDataRequestServiceBackgroundTaskId = @"com.se
     }
     @finally
     {
-        [_lock unlock];
+        pthread_mutex_unlock(&_lock);
     }
 }
 
@@ -446,11 +463,11 @@ static NSString * _Nonnull const SEDataRequestServiceBackgroundTaskId = @"com.se
             
             if (asUpload)
             {
-                return [self createDataRequestWithURLRequest:baseRequest dataClass:requestBuilder.deserializeClass expectedHTTPCodes:requestBuilder.expectedHTTPCodes success:requestBuilder.success failure:requestBuilder.failure completionQueue:requestBuilder.completionQueue];
+                return [self createDataRequestWithURLRequest:baseRequest qos:requestBuilder.qualityOfService dataClass:requestBuilder.deserializeClass expectedHTTPCodes:requestBuilder.expectedHTTPCodes success:requestBuilder.success failure:requestBuilder.failure completionQueue:requestBuilder.completionQueue];
             }
             else
             {
-                return [self createUploadRequestWithURLRequest:baseRequest data:baseRequest.HTTPBody dataClass:requestBuilder.deserializeClass expectedHTTPCodes:requestBuilder.expectedHTTPCodes success:requestBuilder.success failure:requestBuilder.failure completionQueue:requestBuilder.completionQueue];
+                return [self createUploadRequestWithURLRequest:baseRequest qos:requestBuilder.qualityOfService data:baseRequest.HTTPBody dataClass:requestBuilder.deserializeClass expectedHTTPCodes:requestBuilder.expectedHTTPCodes success:requestBuilder.success failure:requestBuilder.failure completionQueue:requestBuilder.completionQueue];
             }
         }
     }
@@ -468,7 +485,7 @@ static NSString * _Nonnull const SEDataRequestServiceBackgroundTaskId = @"com.se
         unsigned long long contentLength = [SEMultipartRequestContentStream contentLengthForParts:requestBuilder.contentParts boundary:boundary stringEncoding:SEDataRequestServiceStringEncoding];
             [baseRequest setValue:[NSString stringWithFormat:@"%llu", contentLength] forHTTPHeaderField:@"Content-Length"];
             
-        return [self createStreamedUploadRequestWithURLRequest:baseRequest dataClass:requestBuilder.deserializeClass expectedHTTPCodes:requestBuilder.expectedHTTPCodes multipartContents:requestBuilder.contentParts boundary:boundary success:requestBuilder.success failure:requestBuilder.failure completionQueue:requestBuilder.completionQueue];
+        return [self createStreamedUploadRequestWithURLRequest:baseRequest qos:requestBuilder.qualityOfService dataClass:requestBuilder.deserializeClass expectedHTTPCodes:requestBuilder.expectedHTTPCodes multipartContents:requestBuilder.contentParts boundary:boundary success:requestBuilder.success failure:requestBuilder.failure completionQueue:requestBuilder.completionQueue];
     }
     
     if (error && requestBuilder.failure != nil)
@@ -502,12 +519,12 @@ static NSString * _Nonnull const SEDataRequestServiceBackgroundTaskId = @"com.se
     SEInternalDataRequest *dataRequest = nil;
     @try
     {
-        [_lock lock];
+        pthread_mutex_lock(&_lock);
         dataRequest = [_internalRequestsByTask objectForKey:@(task.taskIdentifier)];
     }
     @finally
     {
-        [_lock unlock];
+        pthread_mutex_unlock(&_lock);
     }
  
     if (dataRequest) [dataRequest completeWithError:error];
@@ -518,12 +535,12 @@ static NSString * _Nonnull const SEDataRequestServiceBackgroundTaskId = @"com.se
     SEInternalDataRequest *dataRequest = nil;
     @try
     {
-        [_lock lock];
+        pthread_mutex_lock(&_lock);
         dataRequest = [_internalRequestsByTask objectForKey:@(dataTask.taskIdentifier)];
     }
     @finally
     {
-        [_lock unlock];
+        pthread_mutex_unlock(&_lock);
     }
     
     if ((dataRequest == nil) || (dataRequest.isCompleted))
@@ -544,12 +561,12 @@ static NSString * _Nonnull const SEDataRequestServiceBackgroundTaskId = @"com.se
     SEInternalDataRequest *dataRequest = nil;
     @try
     {
-        [_lock lock];
+        pthread_mutex_lock(&_lock);
         dataRequest = [_internalRequestsByTask objectForKey:@(dataTask.taskIdentifier)];
     }
     @finally
     {
-        [_lock unlock];
+        pthread_mutex_unlock(&_lock);
     }
     
     if ((dataRequest != nil) && !dataRequest.isCompleted) [dataRequest receivedData:data];
@@ -560,12 +577,12 @@ static NSString * _Nonnull const SEDataRequestServiceBackgroundTaskId = @"com.se
     SEInternalDataRequest *dataRequest = nil;
     @try
     {
-        [_lock lock];
+        pthread_mutex_lock(&_lock);
         dataRequest = [_internalRequestsByTask objectForKey:@(task.taskIdentifier)];
     }
     @finally
     {
-        [_lock unlock];
+        pthread_mutex_unlock(&_lock);
     }
     
     if ((dataRequest != nil) && !dataRequest.isCompleted)
@@ -583,12 +600,12 @@ static NSString * _Nonnull const SEDataRequestServiceBackgroundTaskId = @"com.se
     SEInternalDataRequest *dataRequest = nil;
     @try
     {
-        [_lock lock];
+        pthread_mutex_lock(&_lock);
         dataRequest = [_internalRequestsByTask objectForKey:@(downloadTask.taskIdentifier)];
     }
     @finally
     {
-        [_lock unlock];
+        pthread_mutex_unlock(&_lock);
     }
     
     if ((dataRequest != nil) && !dataRequest.isCompleted)
@@ -602,12 +619,12 @@ static NSString * _Nonnull const SEDataRequestServiceBackgroundTaskId = @"com.se
     SEInternalDataRequest *dataRequest = nil;
     @try
     {
-        [_lock lock];
+        pthread_mutex_lock(&_lock);
         dataRequest = [_internalRequestsByTask objectForKey:@(downloadTask.taskIdentifier)];
     }
     @finally
     {
-        [_lock unlock];
+        pthread_mutex_unlock(&_lock);
     }
     
     if ((dataRequest != nil) && !dataRequest.isCompleted)
@@ -625,7 +642,7 @@ static NSString * _Nonnull const SEDataRequestServiceBackgroundTaskId = @"com.se
     
     if (urlRequest != nil)
     {
-        return [self createDataRequestWithURLRequest:urlRequest dataClass:class expectedHTTPCodes:nil success:success failure:failure completionQueue:completionQueue];
+        return [self createDataRequestWithURLRequest:urlRequest qos:SEDataRequestQOSDefault dataClass:class expectedHTTPCodes:nil success:success failure:failure completionQueue:completionQueue];
     }
     else
     {
@@ -635,48 +652,49 @@ static NSString * _Nonnull const SEDataRequestServiceBackgroundTaskId = @"com.se
 }
 
 /** Creates and submits standard data task */
-- (id<SECancellableToken>) createDataRequestWithURLRequest: (NSURLRequest *) urlRequest dataClass:(Class) dataClass expectedHTTPCodes:(NSIndexSet *)expectedCodes success:(void (^)(id, NSURLResponse *))success failure:(void (^)(NSError *))failure completionQueue:(dispatch_queue_t)completionQueue
+- (id<SECancellableToken>) createDataRequestWithURLRequest: (NSURLRequest *) urlRequest qos: (SEDataRequestQualityOfService) qos dataClass:(Class) dataClass expectedHTTPCodes:(NSIndexSet *)expectedCodes success:(void (^)(id, NSURLResponse *))success failure:(void (^)(NSError *))failure completionQueue:(dispatch_queue_t)completionQueue
 {
     NSURLSessionDataTask *dataTask = [_session dataTaskWithRequest:urlRequest];
-    return [self createInternalRequestWithTask:dataTask dataClass:dataClass expectedHTTPCodes:expectedCodes multipartContents:nil downloadParameters:nil success:success failure:failure completionQueue:completionQueue];
+    return [self createInternalRequestWithTask:dataTask qos:qos dataClass:dataClass expectedHTTPCodes:expectedCodes multipartContents:nil downloadParameters:nil success:success failure:failure completionQueue:completionQueue];
 }
 
 /** Creates and submits upload data task with provided data */
-- (id<SECancellableToken>) createUploadRequestWithURLRequest: (NSURLRequest *) urlRequest data:(NSData *) data dataClass:(Class) dataClass expectedHTTPCodes:(NSIndexSet *)expectedCodes success:(void (^)(id, NSURLResponse *))success failure:(void (^)(NSError *))failure completionQueue:(dispatch_queue_t)completionQueue
+- (id<SECancellableToken>) createUploadRequestWithURLRequest: (NSURLRequest *) urlRequest qos: (SEDataRequestQualityOfService) qos data:(NSData *) data dataClass:(Class) dataClass expectedHTTPCodes:(NSIndexSet *)expectedCodes success:(void (^)(id, NSURLResponse *))success failure:(void (^)(NSError *))failure completionQueue:(dispatch_queue_t)completionQueue
 {
     NSURLSessionDataTask *dataTask = [_session uploadTaskWithRequest:urlRequest fromData:data];
-    return [self createInternalRequestWithTask:dataTask dataClass:dataClass expectedHTTPCodes:expectedCodes multipartContents:nil downloadParameters:nil success:success failure:failure completionQueue:completionQueue];
+    return [self createInternalRequestWithTask:dataTask qos:qos dataClass:dataClass expectedHTTPCodes:expectedCodes multipartContents:nil downloadParameters:nil success:success failure:failure completionQueue:completionQueue];
 }
 
 /** Creates and submits upload data task with a file */
-- (id<SECancellableToken>) createUploadRequestWithURLRequest: (NSURLRequest *) urlRequest file:(NSURL *) dataFile dataClass:(Class) dataClass expectedHTTPCodes:(NSIndexSet *)expectedCodes success:(void (^)(id, NSURLResponse *))success failure:(void (^)(NSError *))failure completionQueue:(dispatch_queue_t)completionQueue
+- (id<SECancellableToken>) createUploadRequestWithURLRequest: (NSURLRequest *) urlRequest qos:(SEDataRequestQualityOfService)qos file:(NSURL *) dataFile dataClass:(Class) dataClass expectedHTTPCodes:(NSIndexSet *)expectedCodes success:(void (^)(id, NSURLResponse *))success failure:(void (^)(NSError *))failure completionQueue:(dispatch_queue_t)completionQueue
 {
     NSURLSessionDataTask *dataTask = [_session uploadTaskWithRequest:urlRequest fromFile:dataFile];
-    return [self createInternalRequestWithTask:dataTask dataClass:dataClass expectedHTTPCodes:expectedCodes multipartContents:nil downloadParameters:nil success:success failure:failure completionQueue:completionQueue];
+    return [self createInternalRequestWithTask:dataTask qos:qos dataClass:dataClass expectedHTTPCodes:expectedCodes multipartContents:nil downloadParameters:nil success:success failure:failure completionQueue:completionQueue];
 }
 
 /** Creates and submits streamed uploda data task - will have to provide the stream as well. Will use for some of the multipart submissions. */
-- (id<SECancellableToken>) createStreamedUploadRequestWithURLRequest: (NSURLRequest *) urlRequest dataClass:(Class) dataClass expectedHTTPCodes:(NSIndexSet *)expectedCodes multipartContents:(NSArray *)multipartContents boundary:(NSString *)boundary success:(void (^)(id, NSURLResponse *))success failure:(void (^)(NSError *))failure completionQueue:(dispatch_queue_t)completionQueue
+- (id<SECancellableToken>) createStreamedUploadRequestWithURLRequest: (NSURLRequest *) urlRequest qos:(SEDataRequestQualityOfService)qos dataClass:(Class) dataClass expectedHTTPCodes:(NSIndexSet *)expectedCodes multipartContents:(NSArray *)multipartContents boundary:(NSString *)boundary success:(void (^)(id, NSURLResponse *))success failure:(void (^)(NSError *))failure completionQueue:(dispatch_queue_t)completionQueue
 {
     NSURLSessionUploadTask *dataTask = [_session uploadTaskWithStreamedRequest:urlRequest];
     SEInternalMultipartContents *multipartParameters = (multipartContents == nil || boundary == nil) ? nil : [[SEInternalMultipartContents alloc] initWithMultipartContents:multipartContents boundary:boundary];
-    return [self createInternalRequestWithTask:dataTask dataClass:dataClass expectedHTTPCodes:expectedCodes multipartContents:multipartParameters downloadParameters:nil success:success failure:failure completionQueue:completionQueue];
+    return [self createInternalRequestWithTask:dataTask qos:qos dataClass:dataClass expectedHTTPCodes:expectedCodes multipartContents:multipartParameters downloadParameters:nil success:success failure:failure completionQueue:completionQueue];
 }
 
-- (id<SECancellableToken>) createDownloadRequestWithURLRequest: (NSURLRequest *) urlRequest saveFileAs: (NSURL *) saveAs expectedHTTPCodes:(NSIndexSet *)expectedCodes success:(void (^)(id, NSURLResponse *))success failure:(void (^)(NSError *))failure progress:(void (^)(int64_t, int64_t, int64_t))progress completionQueue:(dispatch_queue_t)completionQueue
+- (id<SECancellableToken>) createDownloadRequestWithURLRequest: (NSURLRequest *) urlRequest qos:(SEDataRequestQualityOfService)qos saveFileAs: (NSURL *) saveAs expectedHTTPCodes:(NSIndexSet *)expectedCodes success:(void (^)(id, NSURLResponse *))success failure:(void (^)(NSError *))failure progress:(void (^)(int64_t, int64_t, int64_t))progress completionQueue:(dispatch_queue_t)completionQueue
 {
     NSURLSessionDownloadTask *downloadTask = [_session downloadTaskWithRequest:urlRequest];
     SEInternalDownloadRequestParameters *downloadRequestParameters = [[SEInternalDownloadRequestParameters alloc] initWithSaveAsURL:saveAs downloadProgressCallback:progress];
-    return [self createInternalRequestWithTask:downloadTask dataClass:nil expectedHTTPCodes:nil multipartContents:nil downloadParameters:downloadRequestParameters success:success failure:failure completionQueue:completionQueue];
+    return [self createInternalRequestWithTask:downloadTask qos:qos dataClass:nil expectedHTTPCodes:nil multipartContents:nil downloadParameters:downloadRequestParameters success:success failure:failure completionQueue:completionQueue];
 }
 
-- (id<SECancellableToken>) createInternalRequestWithTask: (NSURLSessionTask *) dataTask dataClass:(Class) dataClass expectedHTTPCodes:(NSIndexSet *)expectedCodes multipartContents:(SEInternalMultipartContents *)multipartContents downloadParameters:(SEInternalDownloadRequestParameters *)downloadParameters success:(void (^)(id, NSURLResponse *))success failure:(void (^)(NSError *))failure completionQueue:(dispatch_queue_t)completionQueue
+- (id<SECancellableToken>) createInternalRequestWithTask: (NSURLSessionTask *) dataTask qos:(SEDataRequestQualityOfService)qos dataClass:(Class) dataClass expectedHTTPCodes:(NSIndexSet *)expectedCodes multipartContents:(SEInternalMultipartContents *)multipartContents downloadParameters:(SEInternalDownloadRequestParameters *)downloadParameters success:(void (^)(id, NSURLResponse *))success failure:(void (^)(NSError *))failure completionQueue:(dispatch_queue_t)completionQueue
 {
-    SEInternalDataRequest *internalRequest = [[SEInternalDataRequest alloc] initWithSessionTask:dataTask requestService:self responseDataClass:dataClass expectedHTTPCodes:expectedCodes multipartContents:multipartContents downloadParameters:downloadParameters success:success failure:failure completionQueue:completionQueue];
+    dataTask.priority = SEDataRequestServiceTaskPriorityForQOS(qos);
+    SEInternalDataRequest *internalRequest = [[SEInternalDataRequest alloc] initWithSessionTask:dataTask requestService:self qualityOfService:qos responseDataClass:dataClass expectedHTTPCodes:expectedCodes multipartContents:multipartContents downloadParameters:downloadParameters success:success failure:failure completionQueue:completionQueue];
     
     @try
     {
-        [_lock lock];
+        pthread_mutex_lock(&_lock);
         [_internalRequestsByKey setObject:internalRequest forKey:internalRequest.token];
         [_internalRequestsByTask setObject:internalRequest forKey:@(dataTask.taskIdentifier)];
     }
@@ -687,7 +705,7 @@ static NSString * _Nonnull const SEDataRequestServiceBackgroundTaskId = @"com.se
     }
     @finally
     {
-        [_lock unlock];
+        pthread_mutex_unlock(&_lock);
     }
     
     [dataTask resume];
@@ -958,7 +976,7 @@ static NSString * _Nonnull const SEDataRequestServiceBackgroundTaskId = @"com.se
     
     @try
     {
-        [_lock lock];
+        pthread_mutex_lock(&_lock);
         
         if (_internalRequestsByKey.count > 0)
         {
@@ -969,7 +987,7 @@ static NSString * _Nonnull const SEDataRequestServiceBackgroundTaskId = @"com.se
     }
     @finally
     {
-        [_lock unlock];
+        pthread_mutex_unlock(&_lock);
     }
 }
 
@@ -979,13 +997,13 @@ static NSString * _Nonnull const SEDataRequestServiceBackgroundTaskId = @"com.se
     
     @try
     {
-        [_lock lock];
+        pthread_mutex_lock(&_lock);
         
         [self completeBackgroundTaskIfNeeded];
     }
     @finally
     {
-        [_lock unlock];
+        pthread_mutex_unlock(&_lock);
     }
 
 }
@@ -995,7 +1013,7 @@ static NSString * _Nonnull const SEDataRequestServiceBackgroundTaskId = @"com.se
     NSArray *incompleteTasks = nil;
     @try
     {
-        [_lock lock];
+        pthread_mutex_lock(&_lock);
         
         if (_internalRequestsByKey.count > 0)
         {
@@ -1004,7 +1022,7 @@ static NSString * _Nonnull const SEDataRequestServiceBackgroundTaskId = @"com.se
     }
     @finally
     {
-        [_lock unlock];
+        pthread_mutex_unlock(&_lock);
     }
     
     if (incompleteTasks != nil)

@@ -22,6 +22,8 @@
 @property (nonatomic, readonly, strong, nullable) void (^failure)(NSError * _Nonnull);
 @property (nonatomic, readonly, strong, nullable) dispatch_queue_t completionQueue;
 
+@property (nonatomic, readonly, assign) SEDataRequestQualityOfService qualityOfService;
+
 @property (nonatomic, readonly, assign, nullable) Class deserializeClass;
 @property (nonatomic, readonly, strong, nullable) NSString *contentEncoding;
 @property (nonatomic, readonly, assign) SEDataRequestAcceptContentType acceptContentType;
