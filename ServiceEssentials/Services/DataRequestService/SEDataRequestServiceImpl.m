@@ -11,6 +11,7 @@
 #import "SEDataRequestServiceImpl.h"
 
 #include <objc/runtime.h>
+#include <pthread.h>
 #if defined(__IPHONE_OS_VERSION_MIN_REQUIRED)
 @import UIKit;
 #endif
@@ -94,7 +95,7 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
     
     NSMutableDictionary<id<SECancellableToken>, SEInternalDataRequest *> *_internalRequestsByKey;
     NSMutableDictionary<NSNumber *, SEInternalDataRequest *> *_internalRequestsByTask;
-    NSLock *_lock;
+    pthread_mutex_t _lock;
     dispatch_queue_t _internalProcessingQueue;
     
     NSDictionary *_dataSerializers;
@@ -130,7 +131,7 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
         
         _internalRequestsByKey = [[NSMutableDictionary alloc] initWithCapacity:1];
         _internalRequestsByTask = [[NSMutableDictionary alloc] initWithCapacity:1];
-        _lock = [[NSLock alloc] init];
+        pthread_mutex_init(&_lock, NULL);
         _internalProcessingQueue = dispatch_queue_create("com.service-essentials.DataRequestServiceQueue", DISPATCH_QUEUE_CONCURRENT);
         
         _defaultSerializer = [SEDataSerializer new];
@@ -174,6 +175,7 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
 {
     [[NSNotificationCenter defaultCenter] removeObserver:self];
     [_session invalidateAndCancel];
+    pthread_mutex_destroy(&_lock);
 }
 
 - (void) onWillTerminateApplication: (NSNotification *) notification
@@ -201,7 +203,7 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
     NSURL *newUrl = [_environmentService environmentBaseURL];
     @try
     {
-        [_lock lock];
+        pthread_mutex_lock(&_lock);
         if (![newUrl isEqual:_baseURL])
         {
             _baseURL = [_environmentService environmentBaseURL];
@@ -211,7 +213,7 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
     }
     @finally
     {
-        [_lock unlock];
+        pthread_mutex_unlock(&_lock);
     }
 }
 
@@ -403,12 +405,12 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
     SEInternalDataRequest *request = nil;
     @try
     {
-        [_lock lock];
+        pthread_mutex_lock(&_lock);
         request = [_internalRequestsByKey objectForKey:token];
     }
     @finally
     {
-        [_lock unlock];
+        pthread_mutex_unlock(&_lock);
     }
     
     if (request) [request cancel];
@@ -418,7 +420,7 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
 {
     @try
     {
-        [_lock lock];
+        pthread_mutex_lock(&_lock);
         [_internalRequestsByKey removeObjectForKey:request.token];
         NSURLSessionTask *task = request.task;
         if (task != nil) [_internalRequestsByTask removeObjectForKey:@(task.taskIdentifier)];
@@ -427,7 +429,7 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
     }
     @finally
     {
-        [_lock unlock];
+        pthread_mutex_unlock(&_lock);
     }
 }
 
@@ -519,12 +521,12 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
     SEInternalDataRequest *dataRequest = nil;
     @try
     {
-        [_lock lock];
+        pthread_mutex_lock(&_lock);
         dataRequest = [_internalRequestsByTask objectForKey:@(task.taskIdentifier)];
     }
     @finally
     {
-        [_lock unlock];
+        pthread_mutex_unlock(&_lock);
     }
  
     if (dataRequest) [dataRequest completeWithError:error];
@@ -535,12 +537,12 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
     SEInternalDataRequest *dataRequest = nil;
     @try
     {
-        [_lock lock];
+        pthread_mutex_lock(&_lock);
         dataRequest = [_internalRequestsByTask objectForKey:@(dataTask.taskIdentifier)];
     }
     @finally
     {
-        [_lock unlock];
+        pthread_mutex_unlock(&_lock);
     }
     
     if ((dataRequest == nil) || (dataRequest.isCompleted))
@@ -561,12 +563,12 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
     SEInternalDataRequest *dataRequest = nil;
     @try
     {
-        [_lock lock];
+        pthread_mutex_lock(&_lock);
         dataRequest = [_internalRequestsByTask objectForKey:@(dataTask.taskIdentifier)];
     }
     @finally
     {
-        [_lock unlock];
+        pthread_mutex_unlock(&_lock);
     }
     
     if ((dataRequest != nil) && !dataRequest.isCompleted) [dataRequest receivedData:data];
@@ -577,12 +579,12 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
     SEInternalDataRequest *dataRequest = nil;
     @try
     {
-        [_lock lock];
+        pthread_mutex_lock(&_lock);
         dataRequest = [_internalRequestsByTask objectForKey:@(task.taskIdentifier)];
     }
     @finally
     {
-        [_lock unlock];
+        pthread_mutex_unlock(&_lock);
     }
     
     if ((dataRequest != nil) && !dataRequest.isCompleted)
@@ -600,12 +602,12 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
     SEInternalDataRequest *dataRequest = nil;
     @try
     {
-        [_lock lock];
+        pthread_mutex_lock(&_lock);
         dataRequest = [_internalRequestsByTask objectForKey:@(downloadTask.taskIdentifier)];
     }
     @finally
     {
-        [_lock unlock];
+        pthread_mutex_unlock(&_lock);
     }
     
     if ((dataRequest != nil) && !dataRequest.isCompleted)
@@ -619,12 +621,12 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
     SEInternalDataRequest *dataRequest = nil;
     @try
     {
-        [_lock lock];
+        pthread_mutex_lock(&_lock);
         dataRequest = [_internalRequestsByTask objectForKey:@(downloadTask.taskIdentifier)];
     }
     @finally
     {
-        [_lock unlock];
+        pthread_mutex_unlock(&_lock);
     }
     
     if ((dataRequest != nil) && !dataRequest.isCompleted)
@@ -694,7 +696,7 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
     
     @try
     {
-        [_lock lock];
+        pthread_mutex_lock(&_lock);
         [_internalRequestsByKey setObject:internalRequest forKey:internalRequest.token];
         [_internalRequestsByTask setObject:internalRequest forKey:@(dataTask.taskIdentifier)];
     }
@@ -705,7 +707,7 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
     }
     @finally
     {
-        [_lock unlock];
+        pthread_mutex_unlock(&_lock);
     }
     
     [dataTask resume];
@@ -976,7 +978,7 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
     
     @try
     {
-        [_lock lock];
+        pthread_mutex_lock(&_lock);
         
         if (_internalRequestsByKey.count > 0)
         {
@@ -987,7 +989,7 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
     }
     @finally
     {
-        [_lock unlock];
+        pthread_mutex_unlock(&_lock);
     }
 }
 
@@ -997,13 +999,13 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
     
     @try
     {
-        [_lock lock];
+        pthread_mutex_lock(&_lock);
         
         [self completeBackgroundTaskIfNeeded];
     }
     @finally
     {
-        [_lock unlock];
+        pthread_mutex_unlock(&_lock);
     }
 
 }
@@ -1013,7 +1015,7 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
     NSArray *incompleteTasks = nil;
     @try
     {
-        [_lock lock];
+        pthread_mutex_lock(&_lock);
         
         if (_internalRequestsByKey.count > 0)
         {
@@ -1022,7 +1024,7 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
     }
     @finally
     {
-        [_lock unlock];
+        pthread_mutex_unlock(&_lock);
     }
     
     if (incompleteTasks != nil)

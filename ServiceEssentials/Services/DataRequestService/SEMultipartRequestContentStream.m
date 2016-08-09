@@ -10,6 +10,7 @@
 
 #import "SEMultipartRequestContentStream.h"
 
+#include <pthread.h>
 #import "SETools.h"
 #import "SEMultipartRequestContentPart.h"
 
@@ -100,7 +101,7 @@ void SEMultipartStreamRunLoopPerformCallBack(void *info);
     NSString *_boundary;
     NSStringEncoding _stringEncoding;
     
-    NSLock *_lock;
+    pthread_mutex_t _lock;
     __weak id<NSStreamDelegate> _delegate;
     
     CFRunLoopRef _runLoop;
@@ -142,7 +143,7 @@ void SEMultipartStreamRunLoopPerformCallBack(void *info);
         _contentParts = parts;
         _stringEncoding = stringEncoding;
         
-        _lock = [[NSLock alloc] init];
+        pthread_mutex_init(&_lock, NULL);
         _delegate = self;
     }
     return self;
@@ -151,6 +152,7 @@ void SEMultipartStreamRunLoopPerformCallBack(void *info);
 - (void)dealloc
 {
     if (_runLoop != NULL) [self removeFromCurrentRunLoop];
+    pthread_mutex_destroy(&_lock);
 }
 
 + (unsigned long long)contentLengthForParts:(NSArray<SEMultipartRequestContentPart *> *)parts boundary:(NSString *)boundary stringEncoding:(NSStringEncoding)stringEncoding
@@ -189,7 +191,7 @@ void SEMultipartStreamRunLoopPerformCallBack(void *info);
 {
     @try
     {
-        [_lock lock];
+        pthread_mutex_lock(&_lock);
         
         if (_currentState == nil)
         {
@@ -201,7 +203,7 @@ void SEMultipartStreamRunLoopPerformCallBack(void *info);
     }
     @finally
     {
-        [_lock unlock];
+        pthread_mutex_unlock(&_lock);
     }
 }
 
@@ -209,7 +211,7 @@ void SEMultipartStreamRunLoopPerformCallBack(void *info);
 {
     @try
     {
-        [_lock lock];
+        pthread_mutex_lock(&_lock);
         
         if (_currentState != nil && [_currentState streamStatus] != NSStreamStatusClosed)
         {
@@ -226,7 +228,7 @@ void SEMultipartStreamRunLoopPerformCallBack(void *info);
     }
     @finally
     {
-        [_lock unlock];
+        pthread_mutex_unlock(&_lock);
     }
 }
 
@@ -264,12 +266,12 @@ void SEMultipartStreamRunLoopPerformCallBack(void *info);
     NSStreamStatus status = NSStreamStatusError;
     @try
     {
-        [_lock lock];
+        pthread_mutex_lock(&_lock);
         status = _currentState == nil ? NSStreamStatusNotOpen : [_currentState streamStatus];
     }
     @finally
     {
-        [_lock unlock];
+        pthread_mutex_unlock(&_lock);
     }
     
     return status;
@@ -280,12 +282,12 @@ void SEMultipartStreamRunLoopPerformCallBack(void *info);
     NSError *error = nil;
     @try
     {
-        [_lock lock];
+        pthread_mutex_lock(&_lock);
         error = _currentState == nil ? nil : [_currentState streamError];
     }
     @finally
     {
-        [_lock unlock];
+        pthread_mutex_unlock(&_lock);
     }
     return error;
 }
@@ -304,7 +306,7 @@ void SEMultipartStreamRunLoopPerformCallBack(void *info);
 {
     @try
     {
-        [_lock lock];
+        pthread_mutex_lock(&_lock);
 
         if (_runLoop == aRunLoop) return;
         
@@ -338,7 +340,7 @@ void SEMultipartStreamRunLoopPerformCallBack(void *info);
     }
     @finally
     {
-        [_lock unlock];
+        pthread_mutex_unlock(&_lock);
     }
 }
 
@@ -346,7 +348,7 @@ void SEMultipartStreamRunLoopPerformCallBack(void *info);
 {
     @try
     {
-        [_lock lock];
+        pthread_mutex_lock(&_lock);
         
         if (_runLoop != NULL && _runLoop == aRunLoop && [_runLoopMode isEqualToString:(__bridge NSString *)aMode])
         {
@@ -355,7 +357,7 @@ void SEMultipartStreamRunLoopPerformCallBack(void *info);
     }
     @finally
     {
-        [_lock unlock];
+        pthread_mutex_unlock(&_lock);
     }
 }
 
@@ -363,7 +365,7 @@ void SEMultipartStreamRunLoopPerformCallBack(void *info);
 {
     @try
     {
-        [_lock lock];
+        pthread_mutex_lock(&_lock);
         
         if (inCallback != NULL)
         {
@@ -402,7 +404,7 @@ void SEMultipartStreamRunLoopPerformCallBack(void *info);
     }
     @finally
     {
-        [_lock unlock];
+        pthread_mutex_unlock(&_lock);
     }
     return YES;
 }
@@ -414,12 +416,12 @@ void SEMultipartStreamRunLoopPerformCallBack(void *info);
     BOOL hasBytesAvailable = NO;
     @try
     {
-        [_lock lock];
+        pthread_mutex_lock(&_lock);
         hasBytesAvailable = _currentState == nil ? NO : [_currentState hasBytesAvailable];
     }
     @finally
     {
-        [_lock unlock];
+        pthread_mutex_unlock(&_lock);
     }
 
     return hasBytesAvailable;
@@ -430,7 +432,7 @@ void SEMultipartStreamRunLoopPerformCallBack(void *info);
     NSInteger bytesRead = 0;
     @try
     {
-        [_lock lock];
+        pthread_mutex_lock(&_lock);
         
         if (_currentState != nil && [_currentState hasBytesAvailable])
         {
@@ -477,7 +479,7 @@ void SEMultipartStreamRunLoopPerformCallBack(void *info);
     }
     @finally
     {
-        [_lock unlock];
+        pthread_mutex_unlock(&_lock);
     }
 
     return bytesRead;
@@ -536,13 +538,13 @@ void SEMultipartStreamRunLoopPerformCallBack(void *info);
 {
     @try
     {
-        [_lock lock];
+        pthread_mutex_lock(&_lock);
 
         if (_currentState == oldState) _currentState = newState;
     }
     @finally
     {
-        [_lock unlock];
+        pthread_mutex_unlock(&_lock);
     }
     
     if (event != NSStreamEventNone) [self notifyAllChannelsWithEventCode:event];

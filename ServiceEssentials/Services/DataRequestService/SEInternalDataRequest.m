@@ -23,18 +23,6 @@
 #define COMPLETED_REQUEST_BIT       0 // signals that request has been completed
 #define CANCELLED_REQUEST_BIT       1 // signals that request has been cancelled, this bit will also be set by completed callback
 
-static inline dispatch_queue_t SEDataRequestQueueForQOS(SEDataRequestQualityOfService qos, dispatch_queue_t privateQueue)
-{
-#ifdef DEBUG
-    if (privateQueue == nil) THROW_INVALID_PARAM(privateQueue, nil);
-#endif
-    if (qos == SEDataRequestQOSDefault) return privateQueue;
-    
-    dispatch_queue_t result = dispatch_get_global_queue(qos, 0);
-    if (result == nil) THROW_INVALID_PARAM(qos, nil);
-    return result;
-}
-
 static inline void SEDataRequestSendCompletionToService(id<SEDataRequestServicePrivate> service, SEInternalDataRequest *request)
 {
     if (service)

@@ -10,7 +10,7 @@
 
 #import "SEServiceLocator.h"
 
-#import <libkern/OSAtomic.h>
+#import <pthread.h>
 #import "SETools.h"
 #import "SEServiceWeakProxy.h"
 
@@ -232,7 +232,7 @@
 
 @implementation LazyServiceContainer
 {
-    NSLock *_lock;
+    pthread_mutex_t _lock;
     id (^_constructionBlock)(SEServiceLocator *serviceLocator);
     id _lazyObject;
     __weak SEServiceLocator *_serviceLocator;
@@ -249,7 +249,7 @@
     self = [super initWithObject:nil];
     if (self)
     {
-        _lock = [[NSLock alloc] init];
+        pthread_mutex_init(&_lock, NULL);
         _constructionBlock = constructionBlock;
         _lazyObject = nil;
         _serviceLocator = serviceLocator;
@@ -258,12 +258,17 @@
     return self;
 }
 
+- (void)dealloc
+{
+    pthread_mutex_destroy(&_lock);
+}
+
 - (id)object
 {
     id result = nil;
     @try
     {
-        [_lock lock];
+        pthread_mutex_lock(&_lock);
         if (_lazyObject == nil)
         {
             SEServiceLocator *strongServiceLocator = _serviceLocator;
@@ -286,7 +291,7 @@
     }
     @finally
     {
-        [_lock unlock];
+        pthread_mutex_unlock(&_lock);
     }
     return result;
 }
