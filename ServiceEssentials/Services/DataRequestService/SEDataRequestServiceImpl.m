@@ -65,22 +65,6 @@ NSString * _Nonnull const SEDataRequestServiceErrorDeserializedContentKey = @"Er
 
 static NSString * _Nonnull const SEDataRequestServiceBackgroundTaskId = @"com.service-essentials.DataRequestService.background";
 
-static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQualityOfService qos)
-{
-    switch (qos) {
-        case SEDataRequestQOSPriorityLow:
-        case SEDataRequestQOSPriorityBackground:
-            return NSURLSessionTaskPriorityLow;
-        case SEDataRequestQOSPriorityHigh:
-        case SEDataRequestQOSPriorityInteractive:
-            return NSURLSessionTaskPriorityHigh;
-        case SEDataRequestQOSDefault:
-        case SEDataRequestQOSPriorityNormal:
-        default:
-            return NSURLSessionTaskPriorityDefault;
-    }
-}
-
 @interface SEDataRequestServiceImpl () <NSURLSessionDelegate, NSURLSessionDataDelegate, NSURLSessionDownloadDelegate, SEDataRequestServicePrivate, SENetworkReachabilityTrackerDelegate>
 @end
 
@@ -110,9 +94,26 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
 #endif
 }
 
-- (instancetype)initWithEnvironmentService:(id<SEEnvironmentService>)environmentService sessionConfiguration:(NSURLSessionConfiguration *)configuration pinningType:(SEDataRequestCertificatePinningType)certificatePinningType applicationBackgroundDefault:(BOOL)backgroundDefault serializers:(NSDictionary<NSString *,__kindof SEDataSerializer *> *)serializers
+- (instancetype)initWithEnvironmentService:(id<SEEnvironmentService>)environmentService
+                      sessionConfiguration:(NSURLSessionConfiguration *)configuration
+                          qualityOfService:(SEDataRequestQualityOfService) qualityOfService
+                               pinningType:(SEDataRequestCertificatePinningType)certificatePinningType
+              applicationBackgroundDefault:(BOOL)backgroundDefault
+                               serializers:(NSDictionary<NSString *,__kindof SEDataSerializer *> *)serializers
 {
-    if (environmentService == nil) THROW_INVALID_PARAMS(nil);
+    if (environmentService == nil) THROW_INVALID_PARAM(environmentService, nil);
+    if (serializers)
+    {
+        for (NSString *key in serializers)
+        {
+            if (![key isKindOfClass:[NSString class]] || ![[serializers objectForKey:key] isKindOfClass:[SEDataSerializer class]])
+            {
+                THROW_INVALID_PARAM(serializers, nil);
+            }
+        }
+    }
+    
+    SEDataRequestVerifyQOS(qualityOfService);
     
     self = [super init];
     if (self)
@@ -122,7 +123,7 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
         
         _queue = [[NSOperationQueue alloc] init];
         _queue.maxConcurrentOperationCount = 5;
-        _queue.qualityOfService = NSQualityOfServiceBackground;
+        _queue.qualityOfService = SEDataRequestQualityOfServiceForQOS(qualityOfService);
         _session = [NSURLSession sessionWithConfiguration:configuration delegate:self delegateQueue:_queue];
         _baseURL = [environmentService environmentBaseURL];
         _pinningType = certificatePinningType;
@@ -174,12 +175,12 @@ static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQu
 
 - (instancetype)initWithEnvironmentService:(id<SEEnvironmentService>)environmentService sessionConfiguration:(NSURLSessionConfiguration *)configuration
 {
-    return [self initWithEnvironmentService:environmentService sessionConfiguration:configuration pinningType:SEDataRequestCertificatePinningTypeCertificate applicationBackgroundDefault:NO serializers:nil];
+    return [self initWithEnvironmentService:environmentService sessionConfiguration:configuration qualityOfService:SEDataRequestQOSDefault pinningType:SEDataRequestCertificatePinningTypeCertificate applicationBackgroundDefault:NO serializers:nil];
 }
 
 - (instancetype)initWithEnvironmentService:(id<SEEnvironmentService>)environmentService sessionConfiguration:(NSURLSessionConfiguration *)configuration pinningType:(SEDataRequestCertificatePinningType)certificatePinningType applicationBackgroundDefault:(BOOL)backgroundDefault
 {
-    return [self initWithEnvironmentService:environmentService sessionConfiguration:configuration pinningType:certificatePinningType applicationBackgroundDefault:backgroundDefault serializers:nil];
+    return [self initWithEnvironmentService:environmentService sessionConfiguration:configuration qualityOfService:SEDataRequestQOSDefault pinningType:certificatePinningType applicationBackgroundDefault:backgroundDefault serializers:nil];
 }
 
 - (void)dealloc
