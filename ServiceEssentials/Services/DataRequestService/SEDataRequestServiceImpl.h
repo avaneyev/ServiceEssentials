@@ -38,6 +38,7 @@
  Initializes a data request service with session configuration and a list of hosts which may have invalid (including self-signed) certificates
  @param environmentService environment service that provides current environment
  @param configuration session configuration
+ @param qualityOfService quality of service that determines the priority of a queue processing data requests
  @param pinningType a type of certificate pinning
  @param backgroundDefault determines whether requests can be sent in the background by default. 
     This is not an equivalent to the background session. Instead, it just allows to finish outstanding requests 
@@ -48,6 +49,11 @@
     If a serializer is not defined for a MIME type, a default will be used, which just uses response data as a reasult.
  @discussion It is highly recommended to use pinned certificates to be able to establish truly trusted connection.
  */
-- (nonnull instancetype) initWithEnvironmentService: (nonnull id<SEEnvironmentService>) environmentService sessionConfiguration: (nullable NSURLSessionConfiguration *) configuration pinningType: (SEDataRequestCertificatePinningType) certificatePinningType applicationBackgroundDefault: (BOOL) backgroundDefault serializers:(nullable NSDictionary<NSString *, __kindof SEDataSerializer *> *)serializers;
+- (nonnull instancetype) initWithEnvironmentService: (nonnull id<SEEnvironmentService>) environmentService
+                               sessionConfiguration: (nullable NSURLSessionConfiguration *) configuration
+                                   qualityOfService:(SEDataRequestQualityOfService)qualityOfService
+                                        pinningType: (SEDataRequestCertificatePinningType) certificatePinningType
+                       applicationBackgroundDefault: (BOOL) backgroundDefault
+                                        serializers:(nullable NSDictionary<NSString *, __kindof SEDataSerializer *> *)serializers;
 
 @end

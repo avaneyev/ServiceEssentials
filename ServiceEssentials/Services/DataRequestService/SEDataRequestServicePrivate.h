@@ -36,6 +36,28 @@ static inline void SEDataRequestVerifyQOS(SEDataRequestQualityOfService qualityO
     }
 }
 
+static inline float SEDataRequestServiceTaskPriorityForQOS(const SEDataRequestQualityOfService qos)
+{
+    switch (qos) {
+        case SEDataRequestQOSPriorityLow:
+        case SEDataRequestQOSPriorityBackground:
+            return NSURLSessionTaskPriorityLow;
+        case SEDataRequestQOSPriorityHigh:
+        case SEDataRequestQOSPriorityInteractive:
+            return NSURLSessionTaskPriorityHigh;
+        case SEDataRequestQOSDefault:
+        case SEDataRequestQOSPriorityNormal:
+        default:
+            return NSURLSessionTaskPriorityDefault;
+    }
+}
+
+static inline NSQualityOfService SEDataRequestQualityOfServiceForQOS(const SEDataRequestQualityOfService qos)
+{
+    if (qos == SEDataRequestQOSDefault) return NSQualityOfServiceDefault;
+    return (NSQualityOfService)qos;
+}
+
 @protocol SECancellableToken;
 @class SEInternalDataRequest;
 @class SEDataSerializer;
