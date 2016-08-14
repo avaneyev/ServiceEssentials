@@ -24,11 +24,14 @@ typedef enum
 } SEPersistenceServiceSaveOptions;
 
 extern NSString * _Nonnull const SEPersistenceServiceInitializationCompleteNotification;
+extern NSString * _Nonnull const SEPersistenceServiceInitializationSucceededKey;
 
 extern NSInteger const SEPersistenceServiceBlockOperationError;
+extern NSInteger const SEPersistenceServiceInitializationError;
 
 @protocol SEPersistenceService <NSObject>
 - (BOOL)isInitialized;
+- (nullable NSError *)initializationFailure;
 
 #pragma mark - Create
 
