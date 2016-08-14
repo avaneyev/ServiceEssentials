@@ -18,6 +18,9 @@
 #import "NSArray+SEJSONExtensions.h"
 
 NSString * _Nonnull const SEPersistenceServiceInitializationCompleteNotification = @"SEPersistenceServiceInitializationCompleteNotification";
+NSString * _Nonnull const SEPersistenceServiceInitializationSucceededKey = @"SEPersistenceServiceInitializationSucceededKey";
+NSInteger const SEPersistenceServiceBlockOperationError = 2000;
+NSInteger const SEPersistenceServiceInitializationError = 2001;
 
 #define PERSISTENCE_VERIFY_DATA_LOADED do { if ((_parent == nil && _dataLoadedFlag == 0) || (_parent != nil && ![_parent isInitialized])) THROW_INCONSISTENCY(nil); } while(0)
 
@@ -31,13 +34,12 @@ static inline BOOL PERSISTENCE_SHOULD_SAVE_AND_PERSIST(SEPersistenceServiceImpl 
     return (parent != nil && options == SEPersistenceServiceSaveAndPersist);
 }
 
-NSInteger const SEPersistenceServiceBlockOperationError = 2000;
-
 @implementation SEPersistenceServiceImpl
 {
     SEPersistenceServiceImpl *_parent;
     NSManagedObjectContext *_objectContext;
     volatile uint32_t _dataLoadedFlag;
+    volatile NSError *_initializationError;
 }
 
 - (instancetype)init
@@ -47,6 +49,9 @@ NSInteger const SEPersistenceServiceBlockOperationError = 2000;
 
 - (instancetype)initWithDataModel:(NSManagedObjectModel *)dataModel storePath:(NSString *)storePath
 {
+    if (dataModel == nil) THROW_INVALID_PARAM(dataModel, nil);
+    if (storePath == nil) THROW_INVALID_PARAM(storePath, nil);
+    
     self = [super init];
     if (self)
     {
@@ -76,9 +81,23 @@ NSInteger const SEPersistenceServiceBlockOperationError = 2000;
         _parent = parentPersistence;
         _objectContext = [parentPersistence createChildContextWithConcurrencyType:concurrencyType verifyLoaded:NO];
         
-        if (!parentPersistence.isInitialized)
+        // since notifications are posted on the main queue, prevent race conditions by
+        // verifying and subscribing on the main queue too.
+        if ([NSThread isMainThread])
         {
-            [[NSNotificationCenter defaultCenter] addObserver: self selector:@selector(onParentInitialize:) name:SEPersistenceServiceInitializationCompleteNotification object:parentPersistence];
+            if (!parentPersistence.isInitialized)
+            {
+                [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onParentInitialize:) name:SEPersistenceServiceInitializationCompleteNotification object:parentPersistence];
+            }
+        }
+        else
+        {
+            dispatch_sync(dispatch_get_main_queue(), ^{
+                if (!parentPersistence.isInitialized)
+                {
+                    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onParentInitialize:) name:SEPersistenceServiceInitializationCompleteNotification object:parentPersistence];
+                }
+            });
         }
     }
     return self;
@@ -104,16 +123,25 @@ NSInteger const SEPersistenceServiceBlockOperationError = 2000;
         NSError *error = nil;
         NSPersistentStoreCoordinator *storeCoordinator = [_objectContext persistentStoreCoordinator];
         NSPersistentStore *store = [storeCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:storeURL options:storeOptions error:&error];
+
+        OSMemoryBarrier();
+        
+        NSDictionary *userInfo;
         if (store == nil)
         {
             NSString *reason = [NSString stringWithFormat:@"Error initializing PSC: %@\n%@", [error localizedDescription], [error userInfo]];
-            THROW_INVALID_PARAMS(@{ NSLocalizedDescriptionKey: reason });
+            _initializationError = [NSError errorWithDomain:SEErrorDomain code:SEPersistenceServiceInitializationError userInfo:@{ NSLocalizedDescriptionKey: reason, NSUnderlyingErrorKey: error }];
+            userInfo = @{
+                         SEPersistenceServiceInitializationSucceededKey: @NO,
+                         NSUnderlyingErrorKey: error
+                         };
+        } else {
+            _dataLoadedFlag = 1;
+            userInfo = @{ SEPersistenceServiceInitializationSucceededKey: @YES };
         }
         
-        OSMemoryBarrier();
-        _dataLoadedFlag = 1;
         dispatch_async(dispatch_get_main_queue(), ^{
-            [[NSNotificationCenter defaultCenter] postNotificationName:SEPersistenceServiceInitializationCompleteNotification object:self];
+            [[NSNotificationCenter defaultCenter] postNotificationName:SEPersistenceServiceInitializationCompleteNotification object:self userInfo:userInfo];
         });
     });
 }
@@ -131,6 +159,11 @@ NSInteger const SEPersistenceServiceBlockOperationError = 2000;
 {
     if (_parent != nil) return [_parent isInitialized];
     return _dataLoadedFlag != 0;
+}
+
+- (NSError *)initializationFailure
+{
+    return [_initializationError copy];
 }
 
 #pragma mark - Service Interface - Child Context
