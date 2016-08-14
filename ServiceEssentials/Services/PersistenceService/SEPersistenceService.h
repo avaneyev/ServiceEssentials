@@ -23,7 +23,7 @@ typedef enum
     SEPersistenceServiceSaveAndPersist
 } SEPersistenceServiceSaveOptions;
 
-extern NSString * const SEPersistenceServiceInitializationCompleteNotification;
+extern NSString * _Nonnull const SEPersistenceServiceInitializationCompleteNotification;
 
 extern NSInteger const SEPersistenceServiceBlockOperationError;
 

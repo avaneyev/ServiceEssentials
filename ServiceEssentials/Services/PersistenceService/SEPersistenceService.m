@@ -17,7 +17,7 @@
 #import "SEConstants.h"
 #import "NSArray+SEJSONExtensions.h"
 
-NSString * const SEPersistenceServiceInitializationCompleteNotification = @"SEPersistenceServiceInitializationCompleteNotification";
+NSString * _Nonnull const SEPersistenceServiceInitializationCompleteNotification = @"SEPersistenceServiceInitializationCompleteNotification";
 
 #define PERSISTENCE_VERIFY_DATA_LOADED do { if ((_parent == nil && _dataLoadedFlag == 0) || (_parent != nil && ![_parent isInitialized])) THROW_INCONSISTENCY(nil); } while(0)
 
@@ -114,7 +114,7 @@ NSInteger const SEPersistenceServiceBlockOperationError = 2000;
         _dataLoadedFlag = 1;
         dispatch_async(dispatch_get_main_queue(), ^{
             [[NSNotificationCenter defaultCenter] postNotificationName:SEPersistenceServiceInitializationCompleteNotification object:self];
-        })
+        });
     });
 }
 
