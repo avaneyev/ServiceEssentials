@@ -17,6 +17,8 @@
 #import "SEConstants.h"
 #import "NSArray+SEJSONExtensions.h"
 
+NSString * const SEPersistenceServiceInitializationCompleteNotification = @"SEPersistenceServiceInitializationCompleteNotification";
+
 #define PERSISTENCE_VERIFY_DATA_LOADED do { if ((_parent == nil && _dataLoadedFlag == 0) || (_parent != nil && ![_parent isInitialized])) THROW_INCONSISTENCY(nil); } while(0)
 
 static inline BOOL PERSISTENCE_SHOULD_SAVE(SEPersistenceServiceSaveOptions options)
@@ -73,8 +75,18 @@ NSInteger const SEPersistenceServiceBlockOperationError = 2000;
     {
         _parent = parentPersistence;
         _objectContext = [parentPersistence createChildContextWithConcurrencyType:concurrencyType verifyLoaded:NO];
+        
+        if (!parentPersistence.isInitialized)
+        {
+            [[NSNotificationCenter defaultCenter] addObserver: self selector:@selector(onParentInitialize:) name:SEPersistenceServiceInitializationCompleteNotification object:parentPersistence];
+        }
     }
     return self;
+}
+
+- (void)dealloc
+{
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 
 - (void)initializeCoreDataWithModel:(NSManagedObjectModel *)objectModel storePath:(NSString *)storePath
@@ -100,7 +112,17 @@ NSInteger const SEPersistenceServiceBlockOperationError = 2000;
         
         OSMemoryBarrier();
         _dataLoadedFlag = 1;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [[NSNotificationCenter defaultCenter] postNotificationName:SEPersistenceServiceInitializationCompleteNotification object:self];
+        })
     });
+}
+
+- (void)onParentInitialize:(NSNotification *)notification
+{
+    NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
+    [center removeObserver:self];
+    [center postNotificationName:SEPersistenceServiceInitializationCompleteNotification object:self];
 }
 
 #pragma mark - Service Interface - State
