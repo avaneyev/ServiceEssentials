@@ -42,6 +42,20 @@ static inline id SEDataRequestServiceGracefulHandleError(NSString *message, NSEr
     return nil;
 }
 
+// Pair of macros to enter and leave the critical section
+#define ENTER_CRITICAL_SECTION(service)           \
+@try                                              \
+{                                                 \
+    pthread_mutex_lock(&(service->_requestLock));
+
+#define LEAVE_CRITICAL_SECTION(service)             \
+}                                                   \
+@finally                                            \
+{                                                   \
+    pthread_mutex_unlock(&(service->_requestLock)); \
+}
+
+
 // Macro for generic handling of an error while building data requests (graceful in Release, crash in Debug)
 #ifdef DEBUG
 #define HANDLE_BUILD_REQUEST_ERROR(message) do { THROW_INVALID_PARAM(body, @{ NSLocalizedDescriptionKey: message }); } while(0)
@@ -196,9 +210,7 @@ static inline void SEDataRequestServiceKillAllTasksAndCleanup(__unsafe_unretaine
     // sending messages to `self` in `dealloc` is strongly discouraged.
     
     NSURLSession *session = nil;
-    @try
-    {
-        pthread_mutex_lock(&(service->_requestLock));
+    ENTER_CRITICAL_SECTION(service)
         for (SEInternalDataRequest *request in service->_internalRequestsByKey.allValues)
         {
             [request cancelAndNotifyComplete:NO];
@@ -212,11 +224,8 @@ static inline void SEDataRequestServiceKillAllTasksAndCleanup(__unsafe_unretaine
             [service->_internalRequestsByTask removeAllObjects];
             service->_session = nil;
         }
-    }
-    @finally
-    {
-        pthread_mutex_unlock(&(service->_requestLock));
-    }
+    LEAVE_CRITICAL_SECTION(service)
+
     [session invalidateAndCancel];
     pthread_mutex_destroy(&(service->_requestLock));
 }
@@ -252,20 +261,14 @@ static inline void SEDataRequestServiceKillAllTasksAndCleanup(__unsafe_unretaine
 - (void) onUpdateEnvironment: (NSNotification *) notification
 {
     NSURL *newUrl = [_environmentService environmentBaseURL];
-    @try
-    {
-        pthread_mutex_lock(&_requestLock);
+    ENTER_CRITICAL_SECTION(self)
         if (![newUrl isEqual:_baseURL])
         {
             _baseURL = [_environmentService environmentBaseURL];
             
             // TODO: implement the rest of environment switch if needed (cancel requests and so on)
         }
-    }
-    @finally
-    {
-        pthread_mutex_unlock(&_requestLock);
-    }
+    LEAVE_CRITICAL_SECTION(self)
 }
 
 #pragma mark - Interface
@@ -290,7 +293,7 @@ static inline void SEDataRequestServiceKillAllTasksAndCleanup(__unsafe_unretaine
     
     if (authorizationHeader != _authorizationHeader)
     {
-        _authorizationHeader = authorizationHeader;
+        _authorizationHeader = [authorizationHeader copy];
     }
 }
 
@@ -306,11 +309,6 @@ static inline void SEDataRequestServiceKillAllTasksAndCleanup(__unsafe_unretaine
 
 - (id<SECancellableToken>)GET:(NSString *)path parameters:(NSDictionary<NSString *,id> *)parameters deserializeToClass:(Class)class success:(void (^)(id _Nonnull, NSURLResponse * _Nonnull))success failure:(void (^)(NSError * _Nonnull))failure completionQueue:(dispatch_queue_t)completionQueue
 {
-    if (class != nil && ![SEDataRequestServiceImpl verifyDeserializationClass:class failure:failure completionQueue:completionQueue])
-    {
-        return nil;
-    }
-    
     return [self buildAndSubmitSimpleRequestWithMethod:@"GET" path:path parameters:parameters mimeType:nil deserializationClass:class success:success failure:failure completionQueue:completionQueue];
 }
 
@@ -333,11 +331,6 @@ static inline void SEDataRequestServiceKillAllTasksAndCleanup(__unsafe_unretaine
         if (bodySerializer == nil) THROW_INVALID_PARAM(encoding, @{ NSLocalizedDescriptionKey: @"Serializer not found for content type" });
     }
 #endif
-    
-    if (class != nil && ![SEDataRequestServiceImpl verifyDeserializationClass:class failure:failure completionQueue:completionQueue])
-    {
-        return nil;
-    }
     
     return [self buildAndSubmitSimpleRequestWithMethod:@"POST" path:path parameters:parameters mimeType:encoding deserializationClass:class success:success failure:failure completionQueue:completionQueue];
 }
@@ -421,26 +414,27 @@ static inline void SEDataRequestServiceKillAllTasksAndCleanup(__unsafe_unretaine
 
 #pragma mark - Unsafe URL Request service interface
 
-- (id<SECancellableToken>)URLGET:(NSURL *)url parameters:(NSDictionary<NSString *,id> *)parameters success:(void (^)(id _Nonnull, NSURLResponse * _Nonnull))success failure:(void (^)(NSError * _Nonnull))failure completionQueue:(dispatch_queue_t)completionQueue
+static inline NSMutableURLRequest *SEDataRequestServiceCreateGetURLRequest(SEDataRequestServiceImpl *service, NSURL *url, NSDictionary<NSString *,id> *parameters)
 {
     if (url == nil || [url isFileURL]) THROW_INVALID_PARAM(url, @{ NSLocalizedDescriptionKey: @"Invalid URL"} );
     
-    if (parameters != nil) url = [SEDataRequestServiceImpl appendQueryStringToURL:url queryParameters:parameters encoding:[self stringEncoding]];
+    if (parameters != nil) url = [SEDataRequestServiceImpl appendQueryStringToURL:url queryParameters:parameters encoding:[service stringEncoding]];
     
-    NSMutableURLRequest *request = [self createRequestWithMethod:@"GET" authorized:NO url:url data:nil contentType:nil acceptContentType:SEDataRequestAcceptContentTypeData charset:nil];
+    return [service createRequestWithMethod:@"GET" authorized:NO url:url data:nil contentType:nil acceptContentType:SEDataRequestAcceptContentTypeData charset:nil];
+}
+
+- (id<SECancellableToken>)URLGET:(NSURL *)url parameters:(NSDictionary<NSString *,id> *)parameters success:(void (^)(id _Nonnull, NSURLResponse * _Nonnull))success failure:(void (^)(NSError * _Nonnull))failure completionQueue:(dispatch_queue_t)completionQueue
+{
+    NSMutableURLRequest *request = SEDataRequestServiceCreateGetURLRequest(self, url, parameters);
 
     return [self createDataRequestWithURLRequest:request qos:SEDataRequestQOSDefault dataClass:nil expectedHTTPCodes:nil success:success failure:failure completionQueue:completionQueue];
 }
 
 - (id<SECancellableToken>)URLDownload:(NSURL *)url parameters:(NSDictionary<NSString *,id> *)parameters saveAs:(NSURL *)saveAsURL success:(void (^)(id _Nullable, NSURLResponse * _Nonnull))success failure:(void (^)(NSError * _Nonnull))failure progress:(void (^)(int64_t, int64_t, int64_t))progress completionQueue:(dispatch_queue_t)completionQueue
 {
-    if (url == nil || [url isFileURL]) THROW_INVALID_PARAM(url, @{ NSLocalizedDescriptionKey: @"Invalid URL"} );
     if (saveAsURL == nil || ![saveAsURL isFileURL]) THROW_INVALID_PARAM(saveAsURL, @{ NSLocalizedDescriptionKey: @"Invalid URL to save a file" });
-
-    if (parameters != nil) url = [SEDataRequestServiceImpl appendQueryStringToURL:url queryParameters:parameters encoding:[self stringEncoding]];
     
-    NSMutableURLRequest *request = [self createRequestWithMethod:@"GET" authorized:NO url:url data:nil contentType:nil acceptContentType:SEDataRequestAcceptContentTypeData charset:nil];
-
+    NSMutableURLRequest *request = SEDataRequestServiceCreateGetURLRequest(self, url, parameters);
     return [self createDownloadRequestWithURLRequest:request qos:SEDataRequestQOSPriorityLow saveFileAs:saveAsURL expectedHTTPCodes:nil success:success failure:failure progress:progress completionQueue:completionQueue];
 }
 
@@ -454,34 +448,22 @@ static inline void SEDataRequestServiceKillAllTasksAndCleanup(__unsafe_unretaine
 - (void)cancelItemForToken:(id<SECancellableToken>)token
 {
     SEInternalDataRequest *request = nil;
-    @try
-    {
-        pthread_mutex_lock(&_requestLock);
+    ENTER_CRITICAL_SECTION(self)
         request = [_internalRequestsByKey objectForKey:token];
-    }
-    @finally
-    {
-        pthread_mutex_unlock(&_requestLock);
-    }
+    LEAVE_CRITICAL_SECTION(self);
     
     if (request) [request cancelAndNotifyComplete:YES];
 }
 
 - (void) completeInternalRequest:(SEInternalDataRequest *)request
 {
-    @try
-    {
-        pthread_mutex_lock(&_requestLock);
+    ENTER_CRITICAL_SECTION(self)
         [_internalRequestsByKey removeObjectForKey:request.token];
         NSURLSessionTask *task = request.task;
         if (task != nil) [_internalRequestsByTask removeObjectForKey:@(task.taskIdentifier)];
         
         if (_internalRequestsByKey.count == 0) [self completeBackgroundTaskIfNeeded];
-    }
-    @finally
-    {
-        pthread_mutex_unlock(&_requestLock);
-    }
+    LEAVE_CRITICAL_SECTION(self);
 }
 
 - (SEDataSerializer *)explicitSerializerForMIMEType:(NSString *)mimeType
@@ -568,33 +550,29 @@ static inline void SEDataRequestServiceKillAllTasksAndCleanup(__unsafe_unretaine
     }
 }
 
-- (void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task didCompleteWithError:(NSError *)error {
+static inline SEInternalDataRequest *SEDataRequestServiceInterlockedGetRequest(SEDataRequestServiceImpl *service, NSURLSessionTask *task)
+{
     SEInternalDataRequest *dataRequest = nil;
     @try
     {
-        pthread_mutex_lock(&_requestLock);
-        dataRequest = [_internalRequestsByTask objectForKey:@(task.taskIdentifier)];
+        pthread_mutex_lock(&(service->_requestLock));
+        dataRequest = [service->_internalRequestsByTask objectForKey:@(task.taskIdentifier)];
     }
     @finally
     {
-        pthread_mutex_unlock(&_requestLock);
+        pthread_mutex_unlock(&(service->_requestLock));
     }
- 
+    return dataRequest;
+}
+
+- (void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task didCompleteWithError:(NSError *)error {
+    SEInternalDataRequest *dataRequest = SEDataRequestServiceInterlockedGetRequest(self, task);
     if (dataRequest) [dataRequest completeWithError:error];
 }
 
 - (void)URLSession:(NSURLSession *)session dataTask:(NSURLSessionDataTask *)dataTask didReceiveResponse:(NSURLResponse *)response completionHandler:(void (^)(NSURLSessionResponseDisposition))completionHandler
 {
-    SEInternalDataRequest *dataRequest = nil;
-    @try
-    {
-        pthread_mutex_lock(&_requestLock);
-        dataRequest = [_internalRequestsByTask objectForKey:@(dataTask.taskIdentifier)];
-    }
-    @finally
-    {
-        pthread_mutex_unlock(&_requestLock);
-    }
+    SEInternalDataRequest *dataRequest = SEDataRequestServiceInterlockedGetRequest(self, dataTask);
     
     if ((dataRequest == nil) || (dataRequest.isCompleted))
     {
@@ -611,32 +589,14 @@ static inline void SEDataRequestServiceKillAllTasksAndCleanup(__unsafe_unretaine
 
 - (void)URLSession:(NSURLSession *)session dataTask:(NSURLSessionDataTask *)dataTask didReceiveData:(NSData *)data
 {
-    SEInternalDataRequest *dataRequest = nil;
-    @try
-    {
-        pthread_mutex_lock(&_requestLock);
-        dataRequest = [_internalRequestsByTask objectForKey:@(dataTask.taskIdentifier)];
-    }
-    @finally
-    {
-        pthread_mutex_unlock(&_requestLock);
-    }
+    SEInternalDataRequest *dataRequest = SEDataRequestServiceInterlockedGetRequest(self, dataTask);
     
     if ((dataRequest != nil) && !dataRequest.isCompleted) [dataRequest receivedData:data];
 }
 
 - (void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task needNewBodyStream:(void (^)(NSInputStream * _Nullable))completionHandler
 {
-    SEInternalDataRequest *dataRequest = nil;
-    @try
-    {
-        pthread_mutex_lock(&_requestLock);
-        dataRequest = [_internalRequestsByTask objectForKey:@(task.taskIdentifier)];
-    }
-    @finally
-    {
-        pthread_mutex_unlock(&_requestLock);
-    }
+    SEInternalDataRequest *dataRequest = SEDataRequestServiceInterlockedGetRequest(self, task);
     
     if ((dataRequest != nil) && !dataRequest.isCompleted)
     {
@@ -650,16 +610,7 @@ static inline void SEDataRequestServiceKillAllTasksAndCleanup(__unsafe_unretaine
 
 - (void)URLSession:(NSURLSession *)session downloadTask:(NSURLSessionDownloadTask *)downloadTask didFinishDownloadingToURL:(NSURL *)location
 {
-    SEInternalDataRequest *dataRequest = nil;
-    @try
-    {
-        pthread_mutex_lock(&_requestLock);
-        dataRequest = [_internalRequestsByTask objectForKey:@(downloadTask.taskIdentifier)];
-    }
-    @finally
-    {
-        pthread_mutex_unlock(&_requestLock);
-    }
+    SEInternalDataRequest *dataRequest = SEDataRequestServiceInterlockedGetRequest(self, downloadTask);
     
     if ((dataRequest != nil) && !dataRequest.isCompleted)
     {
@@ -669,16 +620,7 @@ static inline void SEDataRequestServiceKillAllTasksAndCleanup(__unsafe_unretaine
 
 - (void)URLSession:(NSURLSession *)session downloadTask:(NSURLSessionDownloadTask *)downloadTask didWriteData:(int64_t)bytesWritten totalBytesWritten:(int64_t)totalBytesWritten totalBytesExpectedToWrite:(int64_t)totalBytesExpectedToWrite
 {
-    SEInternalDataRequest *dataRequest = nil;
-    @try
-    {
-        pthread_mutex_lock(&_requestLock);
-        dataRequest = [_internalRequestsByTask objectForKey:@(downloadTask.taskIdentifier)];
-    }
-    @finally
-    {
-        pthread_mutex_unlock(&_requestLock);
-    }
+    SEInternalDataRequest *dataRequest = SEDataRequestServiceInterlockedGetRequest(self, downloadTask);
     
     if ((dataRequest != nil) && !dataRequest.isCompleted)
     {
@@ -690,6 +632,11 @@ static inline void SEDataRequestServiceKillAllTasksAndCleanup(__unsafe_unretaine
 
 - (id<SECancellableToken>) buildAndSubmitSimpleRequestWithMethod:(NSString *)method path:(NSString *)path parameters:(NSDictionary *)parameters mimeType:(NSString *)mimeType deserializationClass:(Class)class success:(void (^)(id, NSURLResponse *))success failure:(void (^)(NSError *))failure completionQueue:(dispatch_queue_t)completionQueue
 {
+    if (class != nil && ![SEDataRequestServiceImpl verifyDeserializationClass:class failure:failure completionQueue:completionQueue])
+    {
+        return nil;
+    }
+    
     NSError *error = nil;
     NSURLRequest *urlRequest = [self buildRequestWithMethod:method path:path body:parameters mimeType:mimeType acceptContentType:SEDataRequestAcceptContentTypeJSON error:&error];
     
@@ -745,21 +692,10 @@ static inline void SEDataRequestServiceKillAllTasksAndCleanup(__unsafe_unretaine
     dataTask.priority = SEDataRequestServiceTaskPriorityForQOS(qos);
     SEInternalDataRequest *internalRequest = [[SEInternalDataRequest alloc] initWithSessionTask:dataTask requestService:self qualityOfService:qos responseDataClass:dataClass expectedHTTPCodes:expectedCodes multipartContents:multipartContents downloadParameters:downloadParameters success:success failure:failure completionQueue:completionQueue];
     
-    @try
-    {
-        pthread_mutex_lock(&_requestLock);
+    ENTER_CRITICAL_SECTION(self)
         [_internalRequestsByKey setObject:internalRequest forKey:internalRequest.token];
         [_internalRequestsByTask setObject:internalRequest forKey:@(dataTask.taskIdentifier)];
-    }
-    @catch (NSException *e)
-    {
-        SELog(@"Failed obtaining a lock with error %@", e);
-        return nil;
-    }
-    @finally
-    {
-        pthread_mutex_unlock(&_requestLock);
-    }
+    LEAVE_CRITICAL_SECTION(self)
     
     [dataTask resume];
     
@@ -1004,7 +940,7 @@ static inline void SEDataRequestServiceKillAllTasksAndCleanup(__unsafe_unretaine
 {
     if (![self canDeserializeToClass:class])
     {
-        NSString *reason = [NSString stringWithFormat:@"Class %@ is not compatible for deserialization.", class];
+        NSString *reason = [NSString stringWithFormat:@"Class %@ is does not support deserialization.", class];
 #ifdef DEBUG
         THROW_INVALID_PARAM(class, (@{ NSLocalizedDescriptionKey: reason }));
 #else
