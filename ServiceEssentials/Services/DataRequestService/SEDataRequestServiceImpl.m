@@ -31,16 +31,22 @@
 #import "SEInternalDataRequestBuilder.h"
 #import "SEMultipartRequestContentStream.h"
 
-// Macro for graceful handling of an error while building data requests
-#define HANDLE_BUILD_REQUEST_ERROR_GRACEFUL(message) do { if (error != nil) { *error = [NSError errorWithDomain:SEErrorDomain code:SEDataRequestServiceRequestSubmissuionFailure userInfo:@{NSLocalizedDescriptionKey: message}]; } \
-SELog(@"%@", message); \
-return nil; } while(0)
+// Always returns nil, it's a shortcut to make a one-liner statement that creates an error and returns no data.
+static inline id SEDataRequestServiceGracefulHandleError(NSString *message, NSError * __autoreleasing *error)
+{
+    if (error != nil)
+    {
+        *error = [NSError errorWithDomain:SEErrorDomain code:SEDataRequestServiceRequestSubmissuionFailure userInfo:@{NSLocalizedDescriptionKey: message}];
+    }
+    SELog(@"%@", message);
+    return nil;
+}
 
 // Macro for generic handling of an error while building data requests (graceful in Release, crash in Debug)
 #ifdef DEBUG
 #define HANDLE_BUILD_REQUEST_ERROR(message) do { THROW_INVALID_PARAM(body, @{ NSLocalizedDescriptionKey: message }); } while(0)
 #else
-#define HANDLE_BUILD_REQUEST_ERROR(message) HANDLE_BUILD_REQUEST_ERROR_GRACEFUL(message)
+#define HANDLE_BUILD_REQUEST_ERROR(message) do { return SEDataRequestServiceGracefulHandleError(message, error); } while(0)
 #endif
 
 const NSStringEncoding SEDataRequestServiceStringEncoding = NSUTF8StringEncoding;
@@ -183,29 +189,50 @@ static NSString * _Nonnull const SEDataRequestServiceBackgroundTaskId = @"com.se
     return [self initWithEnvironmentService:environmentService sessionConfiguration:configuration qualityOfService:SEDataRequestQOSDefault pinningType:certificatePinningType applicationBackgroundDefault:backgroundDefault serializers:nil];
 }
 
-- (void)dealloc
+static inline void SEDataRequestServiceKillAllTasksAndCleanup(__unsafe_unretained SEDataRequestServiceImpl *service, BOOL clearData)
 {
+    // This function is not pretty but it eliminates copy-pasting cleanup logic between dealloc and
+    // other places where object may be invalidated without having to create a method, because
+    // sending messages to `self` in `dealloc` is strongly discouraged.
+    
+    NSURLSession *session = nil;
     @try
     {
-        pthread_mutex_lock(&_requestLock);
-        for (SEInternalDataRequest *request in _internalRequestsByKey.allValues)
+        pthread_mutex_lock(&(service->_requestLock));
+        for (SEInternalDataRequest *request in service->_internalRequestsByKey.allValues)
         {
             [request cancelAndNotifyComplete:NO];
+        }
+        
+        session = service->_session;
+
+        if (clearData)
+        {
+            [service->_internalRequestsByKey removeAllObjects];
+            [service->_internalRequestsByTask removeAllObjects];
+            service->_session = nil;
         }
     }
     @finally
     {
-        pthread_mutex_unlock(&_requestLock);
+        pthread_mutex_unlock(&(service->_requestLock));
     }
+    [session invalidateAndCancel];
+    pthread_mutex_destroy(&(service->_requestLock));
+}
+
+- (void)dealloc
+{
+    // Pointer to `self` is still valid, but need to avoid anything that can retain it.
+    // Can do short cleanup (without cleaning up the requests maps and such).
+    __unsafe_unretained typeof (self) unsafeInstance = self;
+    SEDataRequestServiceKillAllTasksAndCleanup(unsafeInstance, NO);
     [[NSNotificationCenter defaultCenter] removeObserver:self];
-    [_session invalidateAndCancel];
-    pthread_mutex_destroy(&_requestLock);
 }
 
 - (void) onWillTerminateApplication: (NSNotification *) notification
 {
-    [_session invalidateAndCancel];
-    _session = nil;
+    SEDataRequestServiceKillAllTasksAndCleanup(self, YES);
 }
 
 - (void) onDidEnterBackground: (NSNotification *)notification
@@ -502,7 +529,7 @@ static NSString * _Nonnull const SEDataRequestServiceBackgroundTaskId = @"com.se
         // multipart request
         baseRequest = [self createRequestWithMethod:requestBuilder.method authorized:YES url:[self validateAndCreateURLWithPath:requestBuilder.path] data:nil contentType:nil acceptContentType:SEDataRequestAcceptContentTypeData charset:nil];
 
-        NSString *boundary = [SEDataRequestServiceImpl generateRandomBoundaryString];
+        NSString *boundary = [NSString randomStringOfLength:10];
         NSString *mimeType = [NSString stringWithFormat:@"multipart/form-data; boundary=%@", boundary];
         [baseRequest setValue:mimeType forHTTPHeaderField:@"Content-Type"];
         
@@ -781,7 +808,7 @@ static NSString * _Nonnull const SEDataRequestServiceBackgroundTaskId = @"com.se
         if (serializer == nil)
         {
             NSString *message = [NSString stringWithFormat:@"Serializer not found for type %@", mimeType];
-            HANDLE_BUILD_REQUEST_ERROR_GRACEFUL(message);
+            return SEDataRequestServiceGracefulHandleError(message, error);
         }
         data = [serializer serializeObject:body mimeType:mimeType error:&serializationError];
         if (serializationError != nil)
@@ -815,7 +842,7 @@ static NSString * _Nonnull const SEDataRequestServiceBackgroundTaskId = @"com.se
     else
     {
         NSString *message = [NSString stringWithFormat:@"Not a valid request data type: %@", [body class]];
-        HANDLE_BUILD_REQUEST_ERROR_GRACEFUL(message);
+        return SEDataRequestServiceGracefulHandleError(message, error);
     }
 
     *contentTypeOut = contentType;
@@ -1073,11 +1100,6 @@ static NSString * _Nonnull const SEDataRequestServiceBackgroundTaskId = @"com.se
 }
 
 #pragma mark - Utilities
-
-+ (NSString *) generateRandomBoundaryString
-{
-    return [NSString randomStringOfLength:10];
-}
 
 + (NSURL *)appendQueryStringToURL:(NSURL *)url query:(NSString *)query
 {
