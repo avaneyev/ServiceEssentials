@@ -189,7 +189,7 @@ static NSString * _Nonnull const SEDataRequestServiceBackgroundTaskId = @"com.se
     return [self initWithEnvironmentService:environmentService sessionConfiguration:configuration qualityOfService:SEDataRequestQOSDefault pinningType:certificatePinningType applicationBackgroundDefault:backgroundDefault serializers:nil];
 }
 
-static inline void SEDataRequestServiceKillAllTasksAndCleanup(SEDataRequestServiceImpl *service, BOOL clearData)
+static inline void SEDataRequestServiceKillAllTasksAndCleanup(__unsafe_unretained SEDataRequestServiceImpl *service, BOOL clearData)
 {
     // This function is not pretty but it eliminates copy-pasting cleanup logic between dealloc and
     // other places where object may be invalidated without having to create a method, because
