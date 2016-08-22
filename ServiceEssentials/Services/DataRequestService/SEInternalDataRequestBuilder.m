@@ -87,7 +87,7 @@
 
 - (void)setDeserializeClass:(Class)class
 {
-    if (![SEDataRequestServiceImpl canDeserializeToClass:class])
+    if (!SECanDeserializeToClass(class))
     {
         INVALID_BUILDER_PARAM(class)
     }
