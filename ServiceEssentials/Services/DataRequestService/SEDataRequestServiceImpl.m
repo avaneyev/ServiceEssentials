@@ -29,6 +29,7 @@
 #import "SENetworkReachabilityTracker.h"
 #import "SEInternalDataRequestBuilder.h"
 #import "SEMultipartRequestContentStream.h"
+#import "SEDataRequestServiceUserAgent.h"
 
 // Always returns nil, it's a shortcut to make a one-liner statement that creates an error and returns no data.
 static inline id SEDataRequestServiceGracefulHandleError(NSString *message, NSError * __autoreleasing *error)
@@ -177,7 +178,7 @@ static NSString * _Nonnull const SEDataRequestMethodHEAD = @"HEAD";
                                  };
         }
         
-        _userAgent = [SEDataRequestServiceImpl userAgentValue];
+        _userAgent = SEDataRequestServiceUserAgent();
 
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onUpdateEnvironment:) name:SEEnvironmentChangedNotification object:environmentService];
 
@@ -864,36 +865,6 @@ static inline SEInternalDataRequest *SEDataRequestServiceInterlockedGetRequest(S
         THROW_INVALID_PARAM(path, @{ NSLocalizedDescriptionKey: @"Path is not really a path, it modifies host or scheme and cannot be accepted." });
     }
     return url;
-}
-
-#pragma mark - Headers and other Auxillary Stuff
-
-+ (NSString *) userAgentValue
-{
-    // User-Agent Header; see http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.43
-
-    NSString *userAgent = nil;
-    NSDictionary *applicationDictionary = [[NSBundle mainBundle] infoDictionary];
-    
-    NSString *appName = [applicationDictionary objectForKey:(__bridge NSString *)kCFBundleExecutableKey];
-    if (appName == nil) appName = [applicationDictionary objectForKey:(__bridge NSString *)kCFBundleIdentifierKey];
-    
-#if defined(__IPHONE_OS_VERSION_MIN_REQUIRED)
-    id appVersion = (__bridge id)CFBundleGetValueForInfoDictionaryKey(CFBundleGetMainBundle(), kCFBundleVersionKey);
-    if (appVersion == nil) appVersion = [applicationDictionary objectForKey:(__bridge NSString *)kCFBundleVersionKey];
-    
-    UIDevice *device = [UIDevice currentDevice];
-    CGFloat scale = ([[UIScreen mainScreen] respondsToSelector:@selector(scale)] ? [[UIScreen mainScreen] scale] : 1.0f);
-    
-    userAgent = [NSString stringWithFormat:@"%@/%@ (%@; iOS %@; Scale/%0.2f)", appName, appVersion, [device model], [device systemVersion], scale];
-#elif defined(__MAC_OS_X_VERSION_MIN_REQUIRED)
-    id appVersion = [applicationDictionary objectForKey:@"CFBundleShortVersionString"];
-    if (appVersion == nil) appVersion = [applicationDictionary objectForKey:(__bridge NSString *)kCFBundleVersionKey];
-
-    userAgent = [NSString stringWithFormat:@"%@/%@ (Mac OS X %@)", appName, appVersion, [[NSProcessInfo processInfo] operatingSystemVersionString]];
-#endif
-
-    return userAgent;
 }
 
 #pragma mark - Reachability Tracking Delegation

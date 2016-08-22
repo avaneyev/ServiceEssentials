@@ -22,6 +22,7 @@
 
 /* Begin PBXBuildFile section */
 		D55F421C1D1AF1A000B84D60 /* ServiceEssentials.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D5A420DC1D16ED5400471135 /* ServiceEssentials.framework */; };
+		D59737FB1D6A964400629740 /* SEDataRequestServiceUserAgent.h in Headers */ = {isa = PBXBuildFile; fileRef = D59737FA1D6A957000629740 /* SEDataRequestServiceUserAgent.h */; };
 		D5A420E01D16ED5400471135 /* ServiceEssentials.h in Headers */ = {isa = PBXBuildFile; fileRef = D5A420DF1D16ED5400471135 /* ServiceEssentials.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D5A420F91D16EE4000471135 /* SEConstants.h in Headers */ = {isa = PBXBuildFile; fileRef = D5A420F71D16EE4000471135 /* SEConstants.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D5A420FA1D16EE4000471135 /* SEConstants.m in Sources */ = {isa = PBXBuildFile; fileRef = D5A420F81D16EE4000471135 /* SEConstants.m */; };
@@ -94,6 +95,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		D59737FA1D6A957000629740 /* SEDataRequestServiceUserAgent.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SEDataRequestServiceUserAgent.h; sourceTree = "<group>"; };
 		D5A420DC1D16ED5400471135 /* ServiceEssentials.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ServiceEssentials.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D5A420DF1D16ED5400471135 /* ServiceEssentials.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ServiceEssentials.h; sourceTree = "<group>"; };
 		D5A420E11D16ED5400471135 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -286,6 +288,7 @@
 				D5A421161D16F0E600471135 /* SEDataRequestServiceImpl.h */,
 				D5A421171D16F0E600471135 /* SEDataRequestServiceImpl.m */,
 				D5A421181D16F0E600471135 /* SEDataRequestServicePrivate.h */,
+				D59737FA1D6A957000629740 /* SEDataRequestServiceUserAgent.h */,
 				D5A421191D16F0E600471135 /* SEDataRequestServiceSecurityHelper.h */,
 				D5A4211A1D16F0E600471135 /* SEDataRequestServiceSecurityHelper.m */,
 				D5A4211B1D16F0E600471135 /* SEInternalDataRequest.h */,
@@ -431,6 +434,7 @@
 				D5A4215B1D16F0E600471135 /* SEServiceLocator.h in Headers */,
 				D5A421591D16F0E600471135 /* SEPersistenceService.h in Headers */,
 				D5A421051D16EE9E00471135 /* NSArray+SEJSONExtensions.h in Headers */,
+				D59737FB1D6A964400629740 /* SEDataRequestServiceUserAgent.h in Headers */,
 				D5A4213B1D16F0E600471135 /* SECancellableTokenImpl.h in Headers */,
 				D5A421521D16F0E600471135 /* SEPlainTextSerializer.h in Headers */,
 				D5A421571D16F0E600471135 /* SEFetchParameters.h in Headers */,
