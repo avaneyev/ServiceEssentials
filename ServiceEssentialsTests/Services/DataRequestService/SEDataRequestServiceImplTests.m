@@ -34,10 +34,10 @@
     NSURL *urlWithoutQuery = [NSURL URLWithString:@"https://www.awesomehost.com/api/method"];
     NSURL *urlWithQuery = [NSURL URLWithString:@"https://www.awesomehost.com/api/method?firstParam=1"];
 
-    NSURL *result = [SEDataRequestServiceImpl appendQueryStringToURL:urlWithoutQuery query:@"otherParam=2"];
+    NSURL *result = SEURLByAppendingQuery(urlWithoutQuery, @"otherParam=2");
     XCTAssertEqualObjects([NSURL URLWithString:@"https://www.awesomehost.com/api/method?otherParam=2"], result);
     
-    result = [SEDataRequestServiceImpl appendQueryStringToURL:urlWithQuery query:@"thirdParam=xyz"];
+    result = SEURLByAppendingQuery(urlWithQuery, @"thirdParam=xyz");
     XCTAssertEqualObjects([NSURL URLWithString:@"https://www.awesomehost.com/api/method?firstParam=1&thirdParam=xyz"], result);
 }
 

@@ -164,7 +164,7 @@ static inline void SEDataRequestSendCompletionToService(id<SEDataRequestServiceP
     
 #ifdef DEBUG
         // double-ensure
-        if (_dataClass != nil && ![SEDataRequestServiceImpl canDeserializeToClass:_dataClass])
+        if (_dataClass != nil && !SECanDeserializeToClass(_dataClass))
         {
             error = [NSError errorWithDomain:SEErrorDomain code:SEDataRequestServiceSerializationFailure userInfo:@{ NSLocalizedDescriptionKey: @"FAILURE: incorrect class for deserialization" }];
         }
