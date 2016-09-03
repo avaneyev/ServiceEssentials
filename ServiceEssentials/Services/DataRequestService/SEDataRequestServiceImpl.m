@@ -96,22 +96,24 @@ static NSString * _Nonnull const SEDataRequestMethodHEAD = @"HEAD";
 
 @implementation SEDataRequestServiceImpl
 {
-    id<SEEnvironmentService> _environmentService;
     NSURLSession *_session;
     NSOperationQueue *_queue;
-    NSURL *_baseURL;
     SENetworkReachabilityTracker *_reachabilityTracker;
-    SEDataRequestCertificatePinningType _pinningType;
     
     NSMutableDictionary<id<SECancellableToken>, SEInternalDataRequest *> *_internalRequestsByKey;
     NSMutableDictionary<NSNumber *, SEInternalDataRequest *> *_internalRequestsByTask;
     pthread_mutex_t _requestLock;
     
+    id<SEEnvironmentService> _environmentService;
+    NSURL *_baseURL;
+    SEDataRequestCertificatePinningType _pinningType;
+
     NSDictionary<NSString *, __kindof SEDataSerializer *> *_dataSerializers;
     SEDataSerializer *_defaultSerializer;
     
     NSString *_userAgent;
     NSString *_authorizationHeader;
+    pthread_mutex_t _authorizationHeaderLock;
     
     BOOL _applicationBackgroundDefault;
     
@@ -159,6 +161,8 @@ static NSString * _Nonnull const SEDataRequestMethodHEAD = @"HEAD";
         _internalRequestsByTask = [[NSMutableDictionary alloc] initWithCapacity:1];
         pthread_mutex_init(&_requestLock, NULL);
         
+        pthread_mutex_init(&_authorizationHeaderLock, NULL);
+        
         _defaultSerializer = [SEDataSerializer new];
         
         if (serializers != nil)
@@ -191,10 +195,7 @@ static NSString * _Nonnull const SEDataRequestMethodHEAD = @"HEAD";
 #endif
         
         // track connectivity/reachability
-        if ([SENetworkReachabilityTracker isReachabilityAvailable])
-        {
-            _reachabilityTracker = [[SENetworkReachabilityTracker alloc] initWithURL:_baseURL delegate:self dispatchQueue:dispatch_get_main_queue()];
-        }
+        [self createReachabilityTrackerIfAvailable];
     }
     return self;
 }
@@ -243,6 +244,7 @@ static inline void SEDataRequestServiceKillAllTasksAndCleanup(__unsafe_unretaine
     __unsafe_unretained typeof (self) unsafeInstance = self;
     SEDataRequestServiceKillAllTasksAndCleanup(unsafeInstance, NO);
     [[NSNotificationCenter defaultCenter] removeObserver:self];
+    pthread_mutex_destroy(&_authorizationHeaderLock);
 }
 
 - (void) onWillTerminateApplication: (NSNotification *) notification
@@ -271,10 +273,19 @@ static inline void SEDataRequestServiceKillAllTasksAndCleanup(__unsafe_unretaine
         if (![newUrl isEqual:_baseURL])
         {
             _baseURL = [_environmentService environmentBaseURL];
-            
+            [self createReachabilityTrackerIfAvailable];
+
             // TODO: implement the rest of environment switch if needed (cancel requests and so on)
         }
     LEAVE_CRITICAL_SECTION(self)
+}
+
+- (void)createReachabilityTrackerIfAvailable
+{
+    if ([SENetworkReachabilityTracker isReachabilityAvailable])
+    {
+        _reachabilityTracker = [[SENetworkReachabilityTracker alloc] initWithURL:_baseURL delegate:self dispatchQueue:dispatch_get_main_queue()];
+    }
 }
 
 #pragma mark - Interface
@@ -296,16 +307,20 @@ static inline void SEDataRequestServiceKillAllTasksAndCleanup(__unsafe_unretaine
 #ifdef DEBUG
     if (authorizationHeader == nil) THROW_INVALID_PARAM(authorizationHeader, nil);
 #endif
-    
+
+    pthread_mutex_lock(&_authorizationHeaderLock);
     if (authorizationHeader != _authorizationHeader)
     {
         _authorizationHeader = [authorizationHeader copy];
     }
+    pthread_mutex_unlock(&_authorizationHeaderLock);
 }
 
 - (void)clearAuthorization
 {
+    pthread_mutex_lock(&_authorizationHeaderLock);
     _authorizationHeader = nil;
+    pthread_mutex_unlock(&_authorizationHeaderLock);
 }
 
 - (id<SECancellableToken>)GET:(NSString *)path parameters:(NSDictionary <NSString *, id> *)parameters success:(void (^)(id, NSURLResponse *))success failure:(void (^)(NSError *))failure completionQueue:(dispatch_queue_t)completionQueue
@@ -794,7 +809,7 @@ static inline SEInternalDataRequest *SEDataRequestServiceInterlockedGetRequest(S
     return data;
 }
 
-- (NSMutableURLRequest *) createRequestWithMethod:(NSString *)method authorized:(BOOL)authorized url:(NSURL *)url data:(NSData *)data contentType:(NSString *)contentType acceptContentType: (SEDataRequestAcceptContentType) acceptType charset:(NSString *)charset
+- (NSMutableURLRequest *)createRequestWithMethod:(NSString *)method authorized:(BOOL)authorized url:(NSURL *)url data:(NSData *)data contentType:(NSString *)contentType acceptContentType:(SEDataRequestAcceptContentType)acceptType charset:(NSString *)charset
 {
     NSMutableURLRequest *request = [[NSMutableURLRequest alloc] init];
     [request setHTTPMethod:method];
@@ -805,7 +820,12 @@ static inline SEInternalDataRequest *SEDataRequestServiceInterlockedGetRequest(S
 
     if (authorized)
     {
-        if (_authorizationHeader != nil) [request setValue:_authorizationHeader forHTTPHeaderField:@"Authorization"];
+        NSString *authorizationHeader;
+        pthread_mutex_lock(&_authorizationHeaderLock);
+        authorizationHeader = _authorizationHeader;
+        pthread_mutex_unlock(&_authorizationHeaderLock);
+
+        if (authorizationHeader != nil) [request setValue:authorizationHeader forHTTPHeaderField:@"Authorization"];
     }
 
     if (acceptType == SEDataRequestAcceptContentTypeJSON)
@@ -823,7 +843,7 @@ static inline SEInternalDataRequest *SEDataRequestServiceInterlockedGetRequest(S
     return request;
 }
 
-- (NSMutableURLRequest *) buildRequestWithMethod: (NSString *) method path: (NSString *) path body: (id) body mimeType: (NSString *) mimeType acceptContentType: (SEDataRequestAcceptContentType) acceptType error: (NSError * __autoreleasing *) error
+- (NSMutableURLRequest *)buildRequestWithMethod:(NSString *)method path:(NSString *)path body:(id)body mimeType:(NSString *)mimeType acceptContentType:(SEDataRequestAcceptContentType)acceptType error:(NSError * __autoreleasing *)error
 {
     // compose the URL
     BOOL needsBody = NO;
