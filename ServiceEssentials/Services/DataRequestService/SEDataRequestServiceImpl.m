@@ -809,6 +809,20 @@ static inline SEInternalDataRequest *SEDataRequestServiceInterlockedGetRequest(S
     return data;
 }
 
+- (void)applyGlobalAndDelegateSettingsForAuthorizedRequest:(NSMutableURLRequest *)request
+{
+    NSAssert([request.URL.host isEqualToString:_baseURL.host], @"Only applies to requests sent to authorized host");
+
+    // TODO: add request preparation delegate stuff here.
+
+    NSString *authorizationHeader;
+    pthread_mutex_lock(&_authorizationHeaderLock);
+    authorizationHeader = _authorizationHeader;
+    pthread_mutex_unlock(&_authorizationHeaderLock);
+
+    if (authorizationHeader != nil) [request setValue:authorizationHeader forHTTPHeaderField:@"Authorization"];
+}
+
 - (NSMutableURLRequest *)createRequestWithMethod:(NSString *)method authorized:(BOOL)authorized url:(NSURL *)url data:(NSData *)data contentType:(NSString *)contentType acceptContentType:(SEDataRequestAcceptContentType)acceptType charset:(NSString *)charset
 {
     NSMutableURLRequest *request = [[NSMutableURLRequest alloc] init];
@@ -820,12 +834,7 @@ static inline SEInternalDataRequest *SEDataRequestServiceInterlockedGetRequest(S
 
     if (authorized)
     {
-        NSString *authorizationHeader;
-        pthread_mutex_lock(&_authorizationHeaderLock);
-        authorizationHeader = _authorizationHeader;
-        pthread_mutex_unlock(&_authorizationHeaderLock);
-
-        if (authorizationHeader != nil) [request setValue:authorizationHeader forHTTPHeaderField:@"Authorization"];
+        [self applyGlobalAndDelegateSettingsForAuthorizedRequest:request];
     }
 
     if (acceptType == SEDataRequestAcceptContentTypeJSON)
