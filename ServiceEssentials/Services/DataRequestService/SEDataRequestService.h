@@ -319,7 +319,7 @@ typedef enum
  @param url URL being requested.
  @return a dictionary of headers (name-value pairs) that should be added to the request.
  */
-- (NSDictionary<NSString *, NSString *>)dataRequestService:(nonnull id<SEDataRequestService>)dataRequestService additionalHeadersForRequestMethod:(nonnull NSString *)method URL:(nonnull NSURL *)url;
+- (nullable NSDictionary<NSString *, NSString *> *)dataRequestService:(nonnull id<SEDataRequestService>)dataRequestService additionalHeadersForRequestMethod:(nonnull NSString *)method URL:(nonnull NSURL *)url;
 
 /**
  Queries a delegate for additional parameters that should be added to a request with URL and method.
@@ -330,7 +330,7 @@ typedef enum
  @param url URL being requested.
  @return a dictionary of headers (name-value pairs) that should be added to the request.
  */
-- (NSDictionary<NSString *, id>)dataRequestService:(nonnull id<SEDataRequestService>)dataRequestService additionalParametersForRequestMethod:(nonnull NSString *)method URL:(nonnull NSURL *)url;
+- (nullable NSDictionary<NSString *, id> *)dataRequestService:(nonnull id<SEDataRequestService>)dataRequestService additionalParametersForRequestMethod:(nonnull NSString *)method URL:(nonnull NSURL *)url;
 
 @end
 
