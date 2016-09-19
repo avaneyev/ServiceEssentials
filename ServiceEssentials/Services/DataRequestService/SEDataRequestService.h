@@ -287,4 +287,51 @@ typedef enum
 
 @end
 
+/**
+ Preparation delegate is an optional object that is queried during request preparation
+ and can provide additional headers and/or query parameters.
+ 
+ WARNING: data request service will keep a strong reference to the delegate.
+ That is done to avoid accidental deallocations and hard to find bugs where requests 
+ don't match the expectation.
+ If na application needs to make the reference weak, it may use a weak proxy,
+ like `SEServiceWeakProxy` or similar.
+ 
+ Delegate is not queried for unsafe requests, since those are considered fully composed 
+ to only get/download a URL.
+ 
+ The order in which headers and query parameters are applied is from more special to more generic:
+ - First, URL query parameters and headers provided to the builder are applied.
+ - Next, headers and parameters (if any) provided by the delegate are applied.
+ - Finally, generic service-level parameters and headers (such as those set through setSecurityHeader:) are applied.
+ The motivation is to provide consistency and avoid hard to find bugs caused by random collisions.
+ Generic policy cannot be overridden and supercedes specific settings.
+ 
+ The delegate mothods can be used to add tracking, dynamic authorization and lots of other things 
+ in a uniform way rather than having to add them for each request.
+ */
+@protocol SEDataRequestPreparationDelegate <NSObject>
+
+/**
+ Queries a delegate for additional headers that should be added to a request with URL and method.
+ @param dataRequestService data request service sending a request.
+ @param method request method, such as `POST` or `GET`.`
+ @param url URL being requested.
+ @return a dictionary of headers (name-value pairs) that should be added to the request.
+ */
+- (NSDictionary<NSString *, NSString *>)dataRequestService:(nonnull id<SEDataRequestService>)dataRequestService additionalHeadersForRequestMethod:(nonnull NSString *)method URL:(nonnull NSURL *)url;
+
+/**
+ Queries a delegate for additional parameters that should be added to a request with URL and method.
+ For GET and HEAD requests, additional parameters will be appended as part of the query.
+ For POST, they will be a part of the body if it's JSON, otherwise they will be a part of the query.
+ @param dataRequestService data request service sending a request.
+ @param method request method, such as `POST` or `GET`.`
+ @param url URL being requested.
+ @return a dictionary of headers (name-value pairs) that should be added to the request.
+ */
+- (NSDictionary<NSString *, id>)dataRequestService:(nonnull id<SEDataRequestService>)dataRequestService additionalParametersForRequestMethod:(nonnull NSString *)method URL:(nonnull NSURL *)url;
+
+@end
+
 #endif
