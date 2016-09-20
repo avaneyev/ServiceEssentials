@@ -54,6 +54,7 @@
                                    qualityOfService:(SEDataRequestQualityOfService)qualityOfService
                                         pinningType: (SEDataRequestCertificatePinningType) certificatePinningType
                        applicationBackgroundDefault: (BOOL) backgroundDefault
-                                        serializers:(nullable NSDictionary<NSString *, __kindof SEDataSerializer *> *)serializers;
+                                        serializers:(nullable NSDictionary<NSString *, __kindof SEDataSerializer *> *)serializers
+                         requestPreparationDelegate:(nullable id<SEDataRequestPreparationDelegate>)requestDelegate;
 
 @end

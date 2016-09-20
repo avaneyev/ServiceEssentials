@@ -20,6 +20,7 @@
 #import "NSString+SEExtensions.h"
 #import "SEEnvironmentService.h"
 #import "SEInternalDataRequest.h"
+#import "SEDataRequestFactory.h"
 
 #import "SEDataSerializer.h"
 #import "SEJSONDataSerializer.h"
@@ -104,17 +105,19 @@ static NSString * _Nonnull const SEDataRequestMethodHEAD = @"HEAD";
     NSMutableDictionary<NSNumber *, SEInternalDataRequest *> *_internalRequestsByTask;
     pthread_mutex_t _requestLock;
     
+    // Will create the factory for safe requests immediately, but create unsafe counterpart lazy
+    // since it may or may or may not be needed.
+    SEDataRequestFactory *_secureRequestFactory;
+    dispatch_once_t _unsafeRequestFactoryOnceToken;
+    SEDataRequestFactory *_unsafeRequestFactory;
+    
     id<SEEnvironmentService> _environmentService;
     NSURL *_baseURL;
     SEDataRequestCertificatePinningType _pinningType;
 
     NSDictionary<NSString *, __kindof SEDataSerializer *> *_dataSerializers;
     SEDataSerializer *_defaultSerializer;
-    
-    NSString *_userAgent;
-    NSString *_authorizationHeader;
-    pthread_mutex_t _authorizationHeaderLock;
-    
+        
     BOOL _applicationBackgroundDefault;
     
 #if defined(__IPHONE_OS_VERSION_MIN_REQUIRED)
@@ -128,6 +131,7 @@ static NSString * _Nonnull const SEDataRequestMethodHEAD = @"HEAD";
                                pinningType:(SEDataRequestCertificatePinningType)certificatePinningType
               applicationBackgroundDefault:(BOOL)backgroundDefault
                                serializers:(NSDictionary<NSString *,__kindof SEDataSerializer *> *)serializers
+                requestPreparationDelegate:(id<SEDataRequestPreparationDelegate>)requestDelegate
 {
     if (environmentService == nil) THROW_INVALID_PARAM(environmentService, nil);
     if (serializers)
@@ -160,9 +164,7 @@ static NSString * _Nonnull const SEDataRequestMethodHEAD = @"HEAD";
         _internalRequestsByKey = [[NSMutableDictionary alloc] initWithCapacity:1];
         _internalRequestsByTask = [[NSMutableDictionary alloc] initWithCapacity:1];
         pthread_mutex_init(&_requestLock, NULL);
-        
-        pthread_mutex_init(&_authorizationHeaderLock, NULL);
-        
+                
         _defaultSerializer = [SEDataSerializer new];
         
         if (serializers != nil)
@@ -182,7 +184,8 @@ static NSString * _Nonnull const SEDataRequestMethodHEAD = @"HEAD";
                                  };
         }
         
-        _userAgent = SEDataRequestServiceUserAgent();
+        NSString *userAgent = SEDataRequestServiceUserAgent();
+        _secureRequestFactory = [[SEDataRequestFactory alloc] initWithSecure:YES userAgent:userAgent requestPreparationDelegate:requestDelegate];
 
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onUpdateEnvironment:) name:SEEnvironmentChangedNotification object:environmentService];
 
@@ -202,12 +205,12 @@ static NSString * _Nonnull const SEDataRequestMethodHEAD = @"HEAD";
 
 - (instancetype)initWithEnvironmentService:(id<SEEnvironmentService>)environmentService sessionConfiguration:(NSURLSessionConfiguration *)configuration
 {
-    return [self initWithEnvironmentService:environmentService sessionConfiguration:configuration qualityOfService:SEDataRequestQOSDefault pinningType:SEDataRequestCertificatePinningTypeCertificate applicationBackgroundDefault:NO serializers:nil];
+    return [self initWithEnvironmentService:environmentService sessionConfiguration:configuration qualityOfService:SEDataRequestQOSDefault pinningType:SEDataRequestCertificatePinningTypeCertificate applicationBackgroundDefault:NO serializers:nil requestPreparationDelegate:nil];
 }
 
 - (instancetype)initWithEnvironmentService:(id<SEEnvironmentService>)environmentService sessionConfiguration:(NSURLSessionConfiguration *)configuration pinningType:(SEDataRequestCertificatePinningType)certificatePinningType applicationBackgroundDefault:(BOOL)backgroundDefault
 {
-    return [self initWithEnvironmentService:environmentService sessionConfiguration:configuration qualityOfService:SEDataRequestQOSDefault pinningType:certificatePinningType applicationBackgroundDefault:backgroundDefault serializers:nil];
+    return [self initWithEnvironmentService:environmentService sessionConfiguration:configuration qualityOfService:SEDataRequestQOSDefault pinningType:certificatePinningType applicationBackgroundDefault:backgroundDefault serializers:nil requestPreparationDelegate:nil];
 }
 
 static inline void SEDataRequestServiceKillAllTasksAndCleanup(__unsafe_unretained SEDataRequestServiceImpl *service, BOOL clearData)
@@ -244,7 +247,6 @@ static inline void SEDataRequestServiceKillAllTasksAndCleanup(__unsafe_unretaine
     __unsafe_unretained typeof (self) unsafeInstance = self;
     SEDataRequestServiceKillAllTasksAndCleanup(unsafeInstance, NO);
     [[NSNotificationCenter defaultCenter] removeObserver:self];
-    pthread_mutex_destroy(&_authorizationHeaderLock);
 }
 
 - (void) onWillTerminateApplication: (NSNotification *) notification
@@ -308,19 +310,12 @@ static inline void SEDataRequestServiceKillAllTasksAndCleanup(__unsafe_unretaine
     if (authorizationHeader == nil) THROW_INVALID_PARAM(authorizationHeader, nil);
 #endif
 
-    pthread_mutex_lock(&_authorizationHeaderLock);
-    if (authorizationHeader != _authorizationHeader)
-    {
-        _authorizationHeader = [authorizationHeader copy];
-    }
-    pthread_mutex_unlock(&_authorizationHeaderLock);
+    _secureRequestFactory.authorizationHeader = authorizationHeader;
 }
 
 - (void)clearAuthorization
 {
-    pthread_mutex_lock(&_authorizationHeaderLock);
-    _authorizationHeader = nil;
-    pthread_mutex_unlock(&_authorizationHeaderLock);
+    _secureRequestFactory.authorizationHeader = nil;
 }
 
 - (id<SECancellableToken>)GET:(NSString *)path parameters:(NSDictionary <NSString *, id> *)parameters success:(void (^)(id, NSURLResponse *))success failure:(void (^)(NSError *))failure completionQueue:(dispatch_queue_t)completionQueue
@@ -815,11 +810,7 @@ static inline SEInternalDataRequest *SEDataRequestServiceInterlockedGetRequest(S
 
     // TODO: add request preparation delegate stuff here.
 
-    NSString *authorizationHeader;
-    pthread_mutex_lock(&_authorizationHeaderLock);
-    authorizationHeader = _authorizationHeader;
-    pthread_mutex_unlock(&_authorizationHeaderLock);
-
+    NSString *authorizationHeader = _secureRequestFactory.authorizationHeader;
     if (authorizationHeader != nil) [request setValue:authorizationHeader forHTTPHeaderField:@"Authorization"];
 }
 
@@ -829,8 +820,8 @@ static inline SEInternalDataRequest *SEDataRequestServiceInterlockedGetRequest(S
     [request setHTTPMethod:method];
     [request setURL:url];
     
-    
-    if (_userAgent) [request setValue:_userAgent forHTTPHeaderField:@"User-Agent"];
+    NSString *userAgent = _secureRequestFactory.userAgent;
+    if (userAgent) [request setValue:userAgent forHTTPHeaderField:@"User-Agent"];
 
     if (authorized)
     {
