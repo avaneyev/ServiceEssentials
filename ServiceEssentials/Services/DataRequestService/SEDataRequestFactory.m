@@ -79,11 +79,20 @@
 #pragma mark - Interface methods
 
 - (NSURLRequest *)createRequestWithMethod:(NSString *)method
+                                  baseURL:(NSURL *)baseURL
+                                     path:(NSString *)path
+                                     body:(id)body
+                                  failure:(void (^)(NSError * _Nonnull))failure
+                          completionQueue:(dispatch_queue_t)completionQueue
 {
     return nil;
 }
 
-- (NSURLRequest *)createRequestWithBuilder:(SEInternalDataRequestBuilder *)builder asUpload:(BOOL)asUpload
+- (NSURLRequest *)createRequestWithBuilder:(SEInternalDataRequestBuilder *)builder
+                                   baseURL:(NSURL *)baseURL
+                                  asUpload:(BOOL)asUpload
+                                   failure:(void (^)(NSError * _Nonnull))failure
+                           completionQueue:(dispatch_queue_t)completionQueue
 {
     return nil;
 }
