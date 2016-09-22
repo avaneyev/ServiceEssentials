@@ -54,8 +54,8 @@
     NSManagedObjectModel *model = [[NSManagedObjectModel alloc] init];
 
     NSEntityDescription *entity = [[NSEntityDescription alloc] init];
-    [entity setName:NSStringFromClass([SEPersistenceServiceTestModel class])];
-    [entity setManagedObjectClassName:@"PersistenceServiceTestModel"];
+    [entity setName:@"PersistenceServiceTestModel"];
+    [entity setManagedObjectClassName:NSStringFromClass([SEPersistenceServiceTestModel class])];
     
     NSMutableArray *properties = [NSMutableArray array];
     
