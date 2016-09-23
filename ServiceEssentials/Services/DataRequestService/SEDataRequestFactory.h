@@ -10,12 +10,13 @@
 
 #import <Foundation/Foundation.h>
 #import "SEDataRequestService.h"
+#import "SEDataRequestServicePrivate.h"
 
 @class SEInternalDataRequestBuilder;
 
 @interface SEDataRequestFactory : NSObject
 
-- (nonnull instancetype)initWithSecure:(BOOL)secure userAgent:(nonnull NSString *)userAgent requestPreparationDelegate:(nullable id<SEDataRequestPreparationDelegate>)requestDelegate;
+- (nonnull instancetype)initWithService:(nonnull id<SEDataRequestServicePrivate>)service secure:(BOOL)secure userAgent:(nonnull NSString *)userAgent requestPreparationDelegate:(nullable id<SEDataRequestPreparationDelegate>)requestDelegate;
 
 @property (nonatomic, readonly, strong, nonnull) NSString *userAgent;
 @property (nonatomic, strong, nullable) NSString *authorizationHeader;
@@ -24,13 +25,12 @@
                                           baseURL:(nonnull NSURL *)baseURL
                                              path:(nullable NSString *)path
                                              body:(nullable id)body
-                                          failure:(nullable void (^)(NSError * _Nonnull error))failure
-                                  completionQueue:(nullable dispatch_queue_t)completionQueue;
+                                         mimeType:(nullable NSString *)mimeType
+                                            error:(NSError * __autoreleasing _Nullable * _Nullable)error;
 
 - (nonnull NSURLRequest *)createRequestWithBuilder:(nonnull SEInternalDataRequestBuilder *)builder
                                            baseURL:(nonnull NSURL *)baseURL
                                           asUpload:(BOOL)asUpload
-                                           failure:(nullable void (^)(NSError * _Nonnull error))failure
-                                   completionQueue:(nullable dispatch_queue_t)completionQueue;
+                                             error:(NSError * __autoreleasing _Nullable * _Nullable)error;
 
 @end

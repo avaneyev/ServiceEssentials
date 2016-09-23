@@ -86,11 +86,11 @@ NSString * _Nonnull const SEDataRequestServiceErrorDeserializedContentKey = @"Er
 
 static NSString * _Nonnull const SEDataRequestServiceBackgroundTaskId = @"com.service-essentials.DataRequestService.background";
 
-static NSString * _Nonnull const SEDataRequestMethodGET = @"GET";
-static NSString * _Nonnull const SEDataRequestMethodPOST = @"POST";
-static NSString * _Nonnull const SEDataRequestMethodPUT = @"PUT";
-static NSString * _Nonnull const SEDataRequestMethodDELETE = @"DELETE";
-static NSString * _Nonnull const SEDataRequestMethodHEAD = @"HEAD";
+NSString * _Nonnull const SEDataRequestMethodGET = @"GET";
+NSString * _Nonnull const SEDataRequestMethodPOST = @"POST";
+NSString * _Nonnull const SEDataRequestMethodPUT = @"PUT";
+NSString * _Nonnull const SEDataRequestMethodDELETE = @"DELETE";
+NSString * _Nonnull const SEDataRequestMethodHEAD = @"HEAD";
 
 @interface SEDataRequestServiceImpl () <NSURLSessionDelegate, NSURLSessionDataDelegate, NSURLSessionDownloadDelegate, SEDataRequestServicePrivate, SENetworkReachabilityTrackerDelegate>
 @end
@@ -185,7 +185,7 @@ static NSString * _Nonnull const SEDataRequestMethodHEAD = @"HEAD";
         }
         
         NSString *userAgent = SEDataRequestServiceUserAgent();
-        _secureRequestFactory = [[SEDataRequestFactory alloc] initWithSecure:YES userAgent:userAgent requestPreparationDelegate:requestDelegate];
+        _secureRequestFactory = [[SEDataRequestFactory alloc] initWithService:self secure:YES userAgent:userAgent  requestPreparationDelegate:requestDelegate];
 
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onUpdateEnvironment:) name:SEEnvironmentChangedNotification object:environmentService];
 

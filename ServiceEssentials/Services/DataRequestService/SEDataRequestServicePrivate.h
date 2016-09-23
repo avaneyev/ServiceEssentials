@@ -24,6 +24,12 @@ typedef enum {
 #import "SETools.h"
 #import "SEWebFormSerializer.h"
 
+extern NSString * _Nonnull const SEDataRequestMethodGET;
+extern NSString * _Nonnull const SEDataRequestMethodPOST;
+extern NSString * _Nonnull const SEDataRequestMethodPUT;
+extern NSString * _Nonnull const SEDataRequestMethodDELETE;
+extern NSString * _Nonnull const SEDataRequestMethodHEAD;
+
 @protocol SECancellableToken;
 @class SEInternalDataRequest;
 @class SEInternalDataRequestBuilder;

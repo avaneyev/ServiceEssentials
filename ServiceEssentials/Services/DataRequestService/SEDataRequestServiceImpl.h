@@ -21,7 +21,8 @@
  @param configuration session configuration
  @discussion This initializer assumes no certificate validation exceptions
  */
-- (nonnull instancetype) initWithEnvironmentService: (nonnull id<SEEnvironmentService>) environmentService sessionConfiguration: (nullable NSURLSessionConfiguration *) configuration;
+- (nonnull instancetype)initWithEnvironmentService:(nonnull id<SEEnvironmentService>)environmentService
+                              sessionConfiguration:(nullable NSURLSessionConfiguration *) configuration;
 /**
  Initializes a data request service with session configuration, pinning type and background handling option.
  @param environmentService environment service that provides current environment
@@ -32,7 +33,10 @@
  when the application goes to the background as opposed to cancelling them immediately.
  @discussion This initializer assumes default set of data serializers, which cover typical types like JSON and plain text.
  */
-- (nonnull instancetype) initWithEnvironmentService: (nonnull id<SEEnvironmentService>) environmentService sessionConfiguration: (nullable NSURLSessionConfiguration *) configuration pinningType: (SEDataRequestCertificatePinningType) certificatePinningType applicationBackgroundDefault: (BOOL) backgroundDefault;
+- (nonnull instancetype)initWithEnvironmentService:(nonnull id<SEEnvironmentService>)environmentService
+                              sessionConfiguration:(nullable NSURLSessionConfiguration *)configuration
+                                       pinningType:(SEDataRequestCertificatePinningType) certificatePinningType
+                      applicationBackgroundDefault:(BOOL) backgroundDefault;
 
 /**
  Initializes a data request service with session configuration and a list of hosts which may have invalid (including self-signed) certificates
@@ -47,14 +51,15 @@
     One serializer can be used for multiple MIME types.
     Serializers must be thread-safe and re-entrant, and preferrably stateless.
     If a serializer is not defined for a MIME type, a default will be used, which just uses response data as a reasult.
+ @param requestDelegate request preparation delegate used to uniformly customize requests going out.
  @discussion It is highly recommended to use pinned certificates to be able to establish truly trusted connection.
  */
-- (nonnull instancetype) initWithEnvironmentService: (nonnull id<SEEnvironmentService>) environmentService
-                               sessionConfiguration: (nullable NSURLSessionConfiguration *) configuration
-                                   qualityOfService:(SEDataRequestQualityOfService)qualityOfService
-                                        pinningType: (SEDataRequestCertificatePinningType) certificatePinningType
-                       applicationBackgroundDefault: (BOOL) backgroundDefault
-                                        serializers:(nullable NSDictionary<NSString *, __kindof SEDataSerializer *> *)serializers
-                         requestPreparationDelegate:(nullable id<SEDataRequestPreparationDelegate>)requestDelegate;
+- (nonnull instancetype)initWithEnvironmentService:(nonnull id<SEEnvironmentService>)environmentService
+                              sessionConfiguration:(nullable NSURLSessionConfiguration *)configuration
+                                  qualityOfService:(SEDataRequestQualityOfService)qualityOfService
+                                       pinningType:(SEDataRequestCertificatePinningType)certificatePinningType
+                      applicationBackgroundDefault:(BOOL) backgroundDefault
+                                       serializers:(nullable NSDictionary<NSString *, __kindof SEDataSerializer *> *)serializers
+                        requestPreparationDelegate:(nullable id<SEDataRequestPreparationDelegate>)requestDelegate;
 
 @end
