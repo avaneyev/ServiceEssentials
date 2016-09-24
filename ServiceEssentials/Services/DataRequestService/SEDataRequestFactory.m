@@ -17,8 +17,10 @@
 #import "SEDataSerializer.h"
 #import "SEWebFormSerializer.h"
 
+#define CHECK_IF_SECURE do {     if (!_isSecure) THROW_NOT_IMPLEMENTED((@{ NSLocalizedDescriptionKey: [NSString stringWithFormat:@"%@ is not implemented for non-secure request factory", NSStringFromSelector(_cmd)] })); } while(0)
+
 // Always returns nil, it's a shortcut to make a one-liner statement that creates an error and returns no data.
-static inline id SEDataRequestServiceGracefulHandleError(NSString *message, NSError * __autoreleasing *error)
+static inline id SEDataRequestGracefulHandleError(NSString *message, NSError * __autoreleasing *error)
 {
     if (error != nil)
     {
@@ -38,12 +40,29 @@ static inline id SEDataRequestHandleSerializationError(NSError *error, NSError *
     return nil;
 }
 
+static inline NSURL *SEDataRequestValidateAndCreateURL(NSURL *baseURL, NSString *path)
+{
+    NSURL *url = [NSURL URLWithString:path relativeToURL:baseURL];
+    if (![url.scheme isEqualToString:baseURL.scheme] || ![url.host isEqualToString:baseURL.host])
+    {
+        THROW_INVALID_PARAM(path, @{ NSLocalizedDescriptionKey: @"Path is not really a path, it modifies host or scheme and cannot be accepted." });
+    }
+    return url;
+}
+
+static inline NSURL *SEDataRequestMakeURL(NSURL *baseURL, NSString *path, NSDictionary *parameters)
+{
+    NSString *urEncodedParameters = [SEWebFormSerializer webFormEncodedStringFromDictionary:parameters withEncoding:NSUTF8StringEncoding];
+    NSString *appendString = ([path rangeOfString:@"?"].location == NSNotFound) ? @"?" : @"&";
+    return SEDataRequestValidateAndCreateURL(baseURL, [NSString stringWithFormat:@"%@%@%@", path, appendString, urEncodedParameters]);
+}
+
 
 // Macro for generic handling of an error while building data requests (graceful in Release, crash in Debug)
 #ifdef DEBUG
 #define HANDLE_BUILD_REQUEST_ERROR(message) do { THROW_INVALID_PARAM(body, @{ NSLocalizedDescriptionKey: message }); } while(0)
 #else
-#define HANDLE_BUILD_REQUEST_ERROR(message) do { return SEDataRequestServiceGracefulHandleError(message, error); } while(0)
+#define HANDLE_BUILD_REQUEST_ERROR(message) do { return SEDataRequestGracefulHandleError(message, error); } while(0)
 #endif
 
 @implementation SEDataRequestFactory
@@ -53,6 +72,7 @@ static inline id SEDataRequestHandleSerializationError(NSError *error, NSError *
     NSString *_userAgent;
     NSString *_authorizationHeader;
     pthread_mutex_t _authorizationHeaderLock;
+    id<SEDataRequestPreparationDelegate> _requestDelegate;
 }
 
 @synthesize userAgent = _userAgent;
@@ -65,11 +85,13 @@ static inline id SEDataRequestHandleSerializationError(NSError *error, NSError *
 - (instancetype)initWithService:(id<SEDataRequestServicePrivate>)service secure:(BOOL)secure userAgent:(NSString *)userAgent requestPreparationDelegate:(id<SEDataRequestPreparationDelegate>)requestDelegate
 {
     if (service == nil) THROW_INVALID_PARAM(service, nil);
+    if (!secure && requestDelegate != nil) THROW_INVALID_PARAMS(nil);
 
     self = [super init];
     if (self)
     {
         _service = service;
+        _requestDelegate = requestDelegate;
         _userAgent = [userAgent copy];
         
         _isSecure = secure;
@@ -93,6 +115,8 @@ static inline id SEDataRequestHandleSerializationError(NSError *error, NSError *
 
 - (NSString *)authorizationHeader
 {
+    CHECK_IF_SECURE;
+    
     NSString *value;
     
     pthread_mutex_lock(&_authorizationHeaderLock);
@@ -104,6 +128,8 @@ static inline id SEDataRequestHandleSerializationError(NSError *error, NSError *
 
 - (void)setAuthorizationHeader:(NSString *)authorizationHeader
 {
+    CHECK_IF_SECURE;
+
     pthread_mutex_lock(&_authorizationHeaderLock);
     if (authorizationHeader != _authorizationHeader)
     {
@@ -121,6 +147,8 @@ static inline id SEDataRequestHandleSerializationError(NSError *error, NSError *
                                  mimeType:(NSString *)mimeType
                                     error:(NSError * _Nullable __autoreleasing *)error
 {
+    CHECK_IF_SECURE;
+
     return [self buildRequestWithMethod:method baseURL:baseURL path:path body:body mimeType:mimeType acceptContentType:SEDataRequestAcceptContentTypeJSON error:error];
 }
 
@@ -129,6 +157,8 @@ static inline id SEDataRequestHandleSerializationError(NSError *error, NSError *
                                   asUpload:(BOOL)asUpload
                                      error:(NSError * _Nullable __autoreleasing *)error
 {
+    CHECK_IF_SECURE;
+
     return nil;
 }
 
@@ -191,33 +221,44 @@ static inline id SEDataRequestHandleSerializationError(NSError *error, NSError *
 
 - (NSURL *)buildURLWithPath:(NSString *)path baseURL:(NSURL *)baseURL forMethod:(NSString *)method body:(id)body needsBodyData:(BOOL *)needsBody error: (NSError * __autoreleasing *) error
 {
-    NSURL *fullUrl;
-    *needsBody = NO;
-    if ([method isEqualToString:SEDataRequestMethodGET] || [method isEqualToString:SEDataRequestMethodHEAD] || [method isEqualToString:SEDataRequestMethodDELETE])
+    *needsBody = !([method isEqualToString:SEDataRequestMethodGET] || [method isEqualToString:SEDataRequestMethodHEAD] || [method isEqualToString:SEDataRequestMethodDELETE]);
+    if (*needsBody)
     {
-        if (body != nil)
-        {
-            if ([body isKindOfClass:[NSDictionary class]])
-            {
-                fullUrl = [self makeURLWithPath:path baseURL:baseURL parameters:body];
-            }
-            else
-            {
-                NSString *message = [NSString stringWithFormat:@"Not a valid body type for %@ request: %@", method, [body class]];
-                HANDLE_BUILD_REQUEST_ERROR(message);
-            }
-        }
-        else
-        {
-            fullUrl = [self validateAndCreateURLWithPath:path baseURL:baseURL];
-        }
+        return SEDataRequestValidateAndCreateURL(baseURL, path);
+    }
+
+    if (body != nil && ![body isKindOfClass:[NSDictionary class]])
+    {
+        NSString *message = [NSString stringWithFormat:@"Not a valid body type for %@ request: %@", method, [body class]];
+        HANDLE_BUILD_REQUEST_ERROR(message);
     }
     else
     {
-        fullUrl = [self validateAndCreateURLWithPath:path baseURL:baseURL];
-        *needsBody = YES;
+        NSDictionary *parameters = body;
+        if (_isSecure && _requestDelegate)
+        {
+            id requestService = _service;
+            if (requestService == nil) THROW_INCONSISTENCY(nil);
+            NSDictionary *additionalParameters = [_requestDelegate dataRequestService:requestService additionalParametersForRequestMethod:method path:path];
+            if (additionalParameters != nil && additionalParameters.count > 0)
+            {
+                if (parameters == nil)
+                {
+                    parameters = additionalParameters;
+                }
+                else
+                {
+                    // delegate-provided parameters are applied on top
+                    NSMutableDictionary *temp = [[NSMutableDictionary alloc] initWithDictionary:parameters];
+                    [temp addEntriesFromDictionary:additionalParameters];
+                    parameters = temp;
+                }
+            }
+        }
+        
+        if (parameters == nil || parameters.count == 0) return SEDataRequestValidateAndCreateURL(baseURL, path);
+        return SEDataRequestMakeURL(baseURL, path, parameters);
     }
-    return fullUrl;
 }
 
 - (NSData *)buildRequestDataWithBody:(id)body mimeType:(NSString *)mimeType charset:(NSString *)charset contentTypeOut:(NSString * __autoreleasing *)contentTypeOut error: (NSError * __autoreleasing *) error
@@ -234,7 +275,7 @@ static inline id SEDataRequestHandleSerializationError(NSError *error, NSError *
         if (serializer == nil)
         {
             NSString *message = [NSString stringWithFormat:@"Serializer not found for type %@", mimeType];
-            return SEDataRequestServiceGracefulHandleError(message, error);
+            return SEDataRequestGracefulHandleError(message, error);
         }
         data = [serializer serializeObject:body mimeType:mimeType error:&serializationError];
         if (serializationError != nil)
@@ -264,7 +305,7 @@ static inline id SEDataRequestHandleSerializationError(NSError *error, NSError *
     else
     {
         NSString *message = [NSString stringWithFormat:@"Not a valid request data type: %@", [body class]];
-        return SEDataRequestServiceGracefulHandleError(message, error);
+        return SEDataRequestGracefulHandleError(message, error);
     }
 
     *contentTypeOut = contentType;
@@ -280,23 +321,6 @@ static inline id SEDataRequestHandleSerializationError(NSError *error, NSError *
 
     NSString *authorizationHeader = self.authorizationHeader;
     if (authorizationHeader != nil) [request setValue:authorizationHeader forHTTPHeaderField:@"Authorization"];
-}
-
-- (NSURL *)makeURLWithPath:(NSString *)path baseURL:(NSURL *)baseURL parameters:(NSDictionary *)parameters
-{
-    NSString *urEncodedParameters = [SEWebFormSerializer webFormEncodedStringFromDictionary:parameters withEncoding:NSUTF8StringEncoding];
-    NSString *appendString = ([path rangeOfString:@"?"].location == NSNotFound) ? @"?" : @"&";
-    return [self validateAndCreateURLWithPath:[NSString stringWithFormat:@"%@%@%@", path, appendString, urEncodedParameters] baseURL:baseURL];
-}
-
-- (NSURL *)validateAndCreateURLWithPath:(NSString *)path baseURL:(NSURL *)baseURL
-{
-    NSURL *url = [NSURL URLWithString:path relativeToURL:baseURL];
-    if (![url.scheme isEqualToString:baseURL.scheme] || ![url.host isEqualToString:baseURL.host])
-    {
-        THROW_INVALID_PARAM(path, @{ NSLocalizedDescriptionKey: @"Path is not really a path, it modifies host or scheme and cannot be accepted." });
-    }
-    return url;
 }
 
 
