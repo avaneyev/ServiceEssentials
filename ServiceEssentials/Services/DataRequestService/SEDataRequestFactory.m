@@ -17,10 +17,10 @@
 #import "SEDataSerializer.h"
 #import "SEWebFormSerializer.h"
 
-#define CHECK_IF_SECURE do {     if (!_isSecure) THROW_NOT_IMPLEMENTED((@{ NSLocalizedDescriptionKey: [NSString stringWithFormat:@"%@ is not implemented for non-secure request factory", NSStringFromSelector(_cmd)] })); } while(0)
+#define CHECK_IF_SECURE do { if (!_isSecure) THROW_NOT_IMPLEMENTED((@{ NSLocalizedDescriptionKey: [NSString stringWithFormat:@"%@ is not implemented for non-secure request factory", NSStringFromSelector(_cmd)] })); } while(0)
 
 // Always returns nil, it's a shortcut to make a one-liner statement that creates an error and returns no data.
-static inline id SEDataRequestGracefulHandleError(NSString *message, NSError * __autoreleasing *error)
+static inline id SEDataRequestAssignErrorFromMessage(NSString *message, NSError * __autoreleasing *error)
 {
     if (error != nil)
     {
@@ -30,7 +30,7 @@ static inline id SEDataRequestGracefulHandleError(NSString *message, NSError * _
     return nil;
 }
 
-static inline id SEDataRequestHandleSerializationError(NSError *error, NSError * __autoreleasing *errorOut)
+static inline id SEDataRequestAssignSerializationError(NSError *error, NSError * __autoreleasing *errorOut)
 {
     if (errorOut != nil)
     {
@@ -62,7 +62,7 @@ static inline NSURL *SEDataRequestMakeURL(NSURL *baseURL, NSString *path, NSDict
 #ifdef DEBUG
 #define HANDLE_BUILD_REQUEST_ERROR(message) do { THROW_INVALID_PARAM(body, @{ NSLocalizedDescriptionKey: message }); } while(0)
 #else
-#define HANDLE_BUILD_REQUEST_ERROR(message) do { return SEDataRequestGracefulHandleError(message, error); } while(0)
+#define HANDLE_BUILD_REQUEST_ERROR(message) do { return SEDataRequestAssignErrorFromMessage(message, error); } while(0)
 #endif
 
 @implementation SEDataRequestFactory
@@ -275,12 +275,12 @@ static inline NSURL *SEDataRequestMakeURL(NSURL *baseURL, NSString *path, NSDict
         if (serializer == nil)
         {
             NSString *message = [NSString stringWithFormat:@"Serializer not found for type %@", mimeType];
-            return SEDataRequestGracefulHandleError(message, error);
+            return SEDataRequestAssignErrorFromMessage(message, error);
         }
         data = [serializer serializeObject:body mimeType:mimeType error:&serializationError];
         if (serializationError != nil)
         {
-            return SEDataRequestHandleSerializationError(serializationError, error);
+            return SEDataRequestAssignSerializationError(serializationError, error);
         }
         contentType = [NSString stringWithFormat:@"%@; charset=%@", mimeType, charset];
     }
@@ -297,7 +297,7 @@ static inline NSURL *SEDataRequestMakeURL(NSURL *baseURL, NSString *path, NSDict
 
         if (jsonError != nil)
         {
-            return SEDataRequestHandleSerializationError(jsonError, error);
+            return SEDataRequestAssignSerializationError(jsonError, error);
         }
 
         contentType = [NSString stringWithFormat:@"application/json; charset=%@", charset];
@@ -305,7 +305,7 @@ static inline NSURL *SEDataRequestMakeURL(NSURL *baseURL, NSString *path, NSDict
     else
     {
         NSString *message = [NSString stringWithFormat:@"Not a valid request data type: %@", [body class]];
-        return SEDataRequestGracefulHandleError(message, error);
+        return SEDataRequestAssignErrorFromMessage(message, error);
     }
 
     *contentTypeOut = contentType;
