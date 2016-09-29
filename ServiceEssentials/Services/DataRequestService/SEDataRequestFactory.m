@@ -16,6 +16,7 @@
 #import "SEDataRequestServicePrivate.h"
 #import "SEDataSerializer.h"
 #import "SEWebFormSerializer.h"
+#import "SEJSONDataSerializer.h"
 
 #define CHECK_IF_SECURE do { if (!_isSecure) THROW_NOT_IMPLEMENTED((@{ NSLocalizedDescriptionKey: [NSString stringWithFormat:@"%@ is not implemented for non-secure request factory", NSStringFromSelector(_cmd)] })); } while(0)
 
@@ -188,10 +189,10 @@ static inline NSURL *SEDataRequestMakeURL(NSURL *baseURL, NSString *path, NSDict
     }
 
     // assign everything to a request
-    return [self createRequestWithMethod:method url:fullUrl data:data contentType:contentType acceptContentType:acceptType charset:charset];
+    return [self createRequestWithMethod:method path:path url:fullUrl data:data contentType:contentType acceptContentType:acceptType charset:charset];
 }
 
-- (NSMutableURLRequest *)createRequestWithMethod:(NSString *)method url:(NSURL *)url data:(NSData *)data contentType:(NSString *)contentType acceptContentType:(SEDataRequestAcceptContentType)acceptType charset:(NSString *)charset
+- (NSMutableURLRequest *)createRequestWithMethod:(NSString *)method path:(NSString *)path url:(NSURL *)url data:(NSData *)data contentType:(NSString *)contentType acceptContentType:(SEDataRequestAcceptContentType)acceptType charset:(NSString *)charset
 {
     NSMutableURLRequest *request = [[NSMutableURLRequest alloc] init];
     [request setHTTPMethod:method];
@@ -201,7 +202,7 @@ static inline NSURL *SEDataRequestMakeURL(NSURL *baseURL, NSString *path, NSDict
 
     if (_isSecure)
     {
-        [self applyGlobalAndDelegateSettingsForAuthorizedRequest:request];
+        [self applyGlobalAndDelegateSettingsForAuthorizedRequest:request method:method path:path];
     }
 
     if (acceptType == SEDataRequestAcceptContentTypeJSON)
@@ -267,6 +268,7 @@ static inline NSURL *SEDataRequestMakeURL(NSURL *baseURL, NSString *path, NSDict
 
     NSData *data = nil;
     NSString *contentType = nil;
+    BOOL isDictionary = [body isKindOfClass:[NSDictionary class]];
 
     if (mimeType != nil)
     {
@@ -277,6 +279,12 @@ static inline NSURL *SEDataRequestMakeURL(NSURL *baseURL, NSString *path, NSDict
             NSString *message = [NSString stringWithFormat:@"Serializer not found for type %@", mimeType];
             return SEDataRequestAssignErrorFromMessage(message, error);
         }
+        
+        if (isDictionary && serializer.supportsAdditionalParameters)
+        {
+            // TODO: append data
+        }
+        
         data = [serializer serializeObject:body mimeType:mimeType error:&serializationError];
         if (serializationError != nil)
         {
@@ -290,10 +298,14 @@ static inline NSURL *SEDataRequestMakeURL(NSURL *baseURL, NSString *path, NSDict
         data = [text dataUsingEncoding:[_service stringEncoding]];
         contentType = [NSString stringWithFormat:@"text/plain; charset=%@", charset];
     }
-    else if ([body isKindOfClass:[NSArray class]] || [body isKindOfClass:[NSDictionary class]] || [body isKindOfClass:[NSNumber class]])
+    else if (isDictionary || [body isKindOfClass:[NSArray class]] || [body isKindOfClass:[NSNumber class]])
     {
+        if (isDictionary)
+        {
+            // TODO: append data
+        }
         NSError *jsonError = nil;
-        data = [NSJSONSerialization dataWithJSONObject:body options:0 error:&jsonError];
+        data = [SEJSONDataSerializer serializeObject:body error:error];
 
         if (jsonError != nil)
         {
@@ -312,17 +324,24 @@ static inline NSURL *SEDataRequestMakeURL(NSURL *baseURL, NSString *path, NSDict
     return data;
 }
 
-- (void)applyGlobalAndDelegateSettingsForAuthorizedRequest:(NSMutableURLRequest *)request
+- (void)applyGlobalAndDelegateSettingsForAuthorizedRequest:(NSMutableURLRequest *)request method:(NSString *)method path:(NSString *)path
 {
     NSAssert(_isSecure, @"Global settings only apply to secure requests");
-//    NSAssert([request.URL.host isEqualToString:_baseURL.host], @"Only applies to requests sent to authorized host");
+    
+    if (_requestDelegate != nil)
+    {
+        NSDictionary<NSString *, NSString *> *headers = [_requestDelegate dataRequestService:_service additionalHeadersForRequestMethod:method path:path];
+        for (NSString *header in headers)
+        {
+            NSString *value = [headers objectForKey:header];
+            [request setValue:value forHTTPHeaderField:header];
+        }
+    }
 
     // TODO: add request preparation delegate stuff here.
 
     NSString *authorizationHeader = self.authorizationHeader;
     if (authorizationHeader != nil) [request setValue:authorizationHeader forHTTPHeaderField:@"Authorization"];
 }
-
-
 
 @end

@@ -16,6 +16,11 @@
 
 @implementation SEDataSerializer
 
+- (BOOL)supportsAdditionalParameters
+{
+    return NO;
+}
+
 - (NSData *)serializeObject:(id)object mimeType:(NSString *)mimeType error:(NSError *__autoreleasing *)error
 {
     if ([object isKindOfClass:[NSData class]])
