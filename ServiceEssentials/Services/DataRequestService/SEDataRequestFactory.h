@@ -33,4 +33,10 @@
                                           asUpload:(BOOL)asUpload
                                              error:(NSError * __autoreleasing _Nullable * _Nullable)error;
 
+- (nonnull NSURLRequest *)createUnsafeRequestWithMethod:(nonnull NSString *)method
+                                                    URL:(nonnull NSURL *)url
+                                             parameters:(nullable NSDictionary<NSString *, id> *)parameters
+                                               mimeType:(nullable NSString *)mimeType
+                                                  error:(NSError * __autoreleasing _Nullable * _Nullable)error;
+
 @end

@@ -430,18 +430,27 @@ static inline void SEDataRequestServiceKillAllTasksAndCleanup(__unsafe_unretaine
 
 #pragma mark - Unsafe URL Request service interface
 
-static inline NSMutableURLRequest *SEDataRequestServiceCreateGetURLRequest(SEDataRequestServiceImpl *service, NSURL *url, NSDictionary<NSString *,id> *parameters)
+- (SEDataRequestFactory *)lazyUnsafeFactory
 {
-    if (url == nil || [url isFileURL]) THROW_INVALID_PARAM(url, @{ NSLocalizedDescriptionKey: @"Invalid URL"} );
-    
-    if (parameters != nil) url = SEURLByAppendingQueryParameters(url, parameters, [service stringEncoding]);
-    
-    return [service createRequestWithMethod:SEDataRequestMethodGET authorized:NO url:url data:nil contentType:nil acceptContentType:SEDataRequestAcceptContentTypeData charset:nil];
+    dispatch_once(&_unsafeRequestFactoryOnceToken, ^{
+        _unsafeRequestFactory = [[SEDataRequestFactory alloc] initWithService:self secure:NO userAgent:_secureRequestFactory.userAgent requestPreparationDelegate:nil];
+    });
+    return _unsafeRequestFactory;
 }
+
 
 - (id<SECancellableToken>)URLGET:(NSURL *)url parameters:(NSDictionary<NSString *,id> *)parameters success:(void (^)(id _Nonnull, NSURLResponse * _Nonnull))success failure:(void (^)(NSError * _Nonnull))failure completionQueue:(dispatch_queue_t)completionQueue
 {
-    NSMutableURLRequest *request = SEDataRequestServiceCreateGetURLRequest(self, url, parameters);
+    NSError *error = nil;
+    NSURLRequest *request = [[self lazyUnsafeFactory] createUnsafeRequestWithMethod:SEDataRequestMethodGET URL:url parameters:parameters mimeType:nil error:&error];
+    if (request == nil)
+    {
+        if (failure != nil)
+        {
+            dispatch_async(completionQueue, ^{ failure(error); });
+        }
+        return nil;
+    }
 
     return [self createDataRequestWithURLRequest:request qos:SEDataRequestQOSDefault dataClass:nil expectedHTTPCodes:nil success:success failure:failure completionQueue:completionQueue];
 }
@@ -450,7 +459,17 @@ static inline NSMutableURLRequest *SEDataRequestServiceCreateGetURLRequest(SEDat
 {
     if (saveAsURL == nil || ![saveAsURL isFileURL]) THROW_INVALID_PARAM(saveAsURL, @{ NSLocalizedDescriptionKey: @"Invalid URL to save a file" });
     
-    NSMutableURLRequest *request = SEDataRequestServiceCreateGetURLRequest(self, url, parameters);
+    NSError *error = nil;
+    NSURLRequest *request = [[self lazyUnsafeFactory] createUnsafeRequestWithMethod:SEDataRequestMethodGET URL:url parameters:parameters mimeType:nil error:&error];
+    if (request == nil)
+    {
+        if (failure != nil)
+        {
+            dispatch_async(completionQueue, ^{ failure(error); });
+        }
+        return nil;
+    }
+    
     return [self createDownloadRequestWithURLRequest:request qos:SEDataRequestQOSPriorityLow saveFileAs:saveAsURL expectedHTTPCodes:nil success:success failure:failure progress:progress completionQueue:completionQueue];
 }
 

@@ -58,6 +58,30 @@ static inline NSURL *SEDataRequestMakeURL(NSURL *baseURL, NSString *path, NSDict
     return SEDataRequestValidateAndCreateURL(baseURL, [NSString stringWithFormat:@"%@%@%@", path, appendString, urEncodedParameters]);
 }
 
+static inline NSDictionary *SEDataRequestDictionaryWithAdditionalParameters(NSDictionary *parameters, id service, id<SEDataRequestPreparationDelegate> requestDelegate, NSString *method, NSString *path)
+{
+    NSDictionary *additionalParameters = [requestDelegate dataRequestService:service additionalParametersForRequestMethod:method path:path];
+    if (additionalParameters != nil && additionalParameters.count > 0)
+    {
+        if (parameters == nil)
+        {
+            parameters = additionalParameters;
+        }
+        else
+        {
+            // delegate-provided parameters are applied on top
+            NSMutableDictionary *temp = [[NSMutableDictionary alloc] initWithDictionary:parameters];
+            [temp addEntriesFromDictionary:additionalParameters];
+            parameters = temp;
+        }
+    }
+    return parameters;
+}
+
+static inline BOOL SEDataRequestMethodURLEncodesBody(NSString *method)
+{
+    return !([method isEqualToString:SEDataRequestMethodGET] || [method isEqualToString:SEDataRequestMethodHEAD] || [method isEqualToString:SEDataRequestMethodDELETE]);
+}
 
 // Macro for generic handling of an error while building data requests (graceful in Release, crash in Debug)
 #ifdef DEBUG
@@ -149,8 +173,12 @@ static inline NSURL *SEDataRequestMakeURL(NSURL *baseURL, NSString *path, NSDict
                                     error:(NSError * _Nullable __autoreleasing *)error
 {
     CHECK_IF_SECURE;
+    
+    // since service is weak-referenced, retain it for the duration of request making and pass around
+    id service = _service;
+    if (service == nil) return nil;
 
-    return [self buildRequestWithMethod:method baseURL:baseURL path:path body:body mimeType:mimeType acceptContentType:SEDataRequestAcceptContentTypeJSON error:error];
+    return [self buildRequestWithService:service method:method baseURL:baseURL path:path body:body mimeType:mimeType acceptContentType:SEDataRequestAcceptContentTypeJSON error:error];
 }
 
 - (NSURLRequest *)createRequestWithBuilder:(SEInternalDataRequestBuilder *)builder
@@ -160,16 +188,63 @@ static inline NSURL *SEDataRequestMakeURL(NSURL *baseURL, NSString *path, NSDict
 {
     CHECK_IF_SECURE;
 
+    id service = _service;
+    if (service == nil) return nil;
+
     return nil;
+}
+
+- (NSURLRequest *)createUnsafeRequestWithMethod:(NSString *)method
+                                            URL:(NSURL *)url
+                                     parameters:(NSDictionary<NSString *, id> *)parameters
+                                       mimeType:(NSString *)mimeType
+                                          error:(NSError * _Nullable __autoreleasing *)error
+{
+    if (_isSecure) THROW_NOT_IMPLEMENTED((@{ NSLocalizedDescriptionKey: [NSString stringWithFormat:@"%@ is not implemented for secure request factory", NSStringFromSelector(_cmd)] }));
+    
+    if (url == nil || [url isFileURL]) THROW_INVALID_PARAM(url, @{ NSLocalizedDescriptionKey: @"Invalid URL"} );
+ 
+    NSData *data = nil;
+    NSString *contentType = nil;
+    NSStringEncoding encoding = [_service stringEncoding];
+    if (parameters != nil)
+    {
+        if (SEDataRequestMethodURLEncodesBody(method))
+        {
+            url = SEURLByAppendingQueryParameters(url, parameters, encoding);
+        }
+        else
+        {
+            NSString *charset = (__bridge NSString *)CFStringConvertEncodingToIANACharSetName(CFStringConvertNSStringEncodingToEncoding(encoding));
+            data = [self buildRequestDataWithService:_service method:method path:nil body:parameters mimeType:mimeType charset:charset contentTypeOut:&contentType error:error];
+            
+            if (data == nil) return nil;
+        }
+    }
+
+    NSMutableURLRequest *request = [[NSMutableURLRequest alloc] init];
+    [request setHTTPMethod:method];
+    [request setURL:url];
+    
+    NSString *userAgent = _userAgent;
+    if (userAgent) [request setValue:userAgent forHTTPHeaderField:@"User-Agent"];
+    
+    if (data)
+    {
+        [request setValue:contentType forHTTPHeaderField:@"Content-Type"];
+        [request setHTTPBody:data];
+    }
+    
+    return request;
 }
 
 #pragma mark - Internal building functions
 
-- (NSMutableURLRequest *)buildRequestWithMethod:(NSString *)method baseURL:(NSURL *)baseURL path:(NSString *)path body:(id)body mimeType:(NSString *)mimeType acceptContentType:(SEDataRequestAcceptContentType)acceptType error:(NSError * __autoreleasing *)error
+- (NSMutableURLRequest *)buildRequestWithService:(id)service method:(NSString *)method baseURL:(NSURL *)baseURL path:(NSString *)path body:(id)body mimeType:(NSString *)mimeType acceptContentType:(SEDataRequestAcceptContentType)acceptType error:(NSError * __autoreleasing *)error
 {
     // compose the URL
     BOOL needsBody = NO;
-    NSURL *fullUrl = [self buildURLWithPath:path baseURL:baseURL forMethod:method body:body needsBodyData:&needsBody error:error];
+    NSURL *fullUrl = [self buildURLWithService:service path:path baseURL:baseURL forMethod:method body:body needsBodyData:&needsBody error:error];
 
     if (fullUrl == nil)
     {
@@ -184,15 +259,15 @@ static inline NSURL *SEDataRequestMakeURL(NSURL *baseURL, NSString *path, NSDict
 
     if (needsBody && (body != nil))
     {
-        data = [self buildRequestDataWithBody:body mimeType:mimeType charset:charset contentTypeOut:&contentType error:error];
+        data = [self buildRequestDataWithService:service method:method path:path body:body mimeType:mimeType charset:charset contentTypeOut:&contentType error:error];
         if (data == nil) return nil;
     }
 
     // assign everything to a request
-    return [self createRequestWithMethod:method path:path url:fullUrl data:data contentType:contentType acceptContentType:acceptType charset:charset];
+    return [self createRequestWithService:service method:method path:path url:fullUrl data:data contentType:contentType acceptContentType:acceptType charset:charset];
 }
 
-- (NSMutableURLRequest *)createRequestWithMethod:(NSString *)method path:(NSString *)path url:(NSURL *)url data:(NSData *)data contentType:(NSString *)contentType acceptContentType:(SEDataRequestAcceptContentType)acceptType charset:(NSString *)charset
+- (NSMutableURLRequest *)createRequestWithService:(id)service method:(NSString *)method path:(NSString *)path url:(NSURL *)url data:(NSData *)data contentType:(NSString *)contentType acceptContentType:(SEDataRequestAcceptContentType)acceptType charset:(NSString *)charset
 {
     NSMutableURLRequest *request = [[NSMutableURLRequest alloc] init];
     [request setHTTPMethod:method];
@@ -202,7 +277,7 @@ static inline NSURL *SEDataRequestMakeURL(NSURL *baseURL, NSString *path, NSDict
 
     if (_isSecure)
     {
-        [self applyGlobalAndDelegateSettingsForAuthorizedRequest:request method:method path:path];
+        [self applyGlobalAndDelegateSettingsForAuthorizedRequest:request withService:service method:method path:path];
     }
 
     if (acceptType == SEDataRequestAcceptContentTypeJSON)
@@ -220,9 +295,9 @@ static inline NSURL *SEDataRequestMakeURL(NSURL *baseURL, NSString *path, NSDict
     return request;
 }
 
-- (NSURL *)buildURLWithPath:(NSString *)path baseURL:(NSURL *)baseURL forMethod:(NSString *)method body:(id)body needsBodyData:(BOOL *)needsBody error: (NSError * __autoreleasing *) error
+- (NSURL *)buildURLWithService:(id)service path:(NSString *)path baseURL:(NSURL *)baseURL forMethod:(NSString *)method body:(id)body needsBodyData:(BOOL *)needsBody error: (NSError * __autoreleasing *) error
 {
-    *needsBody = !([method isEqualToString:SEDataRequestMethodGET] || [method isEqualToString:SEDataRequestMethodHEAD] || [method isEqualToString:SEDataRequestMethodDELETE]);
+    *needsBody = SEDataRequestMethodURLEncodesBody(method);
     if (*needsBody)
     {
         return SEDataRequestValidateAndCreateURL(baseURL, path);
@@ -238,23 +313,7 @@ static inline NSURL *SEDataRequestMakeURL(NSURL *baseURL, NSString *path, NSDict
         NSDictionary *parameters = body;
         if (_isSecure && _requestDelegate)
         {
-            id requestService = _service;
-            if (requestService == nil) THROW_INCONSISTENCY(nil);
-            NSDictionary *additionalParameters = [_requestDelegate dataRequestService:requestService additionalParametersForRequestMethod:method path:path];
-            if (additionalParameters != nil && additionalParameters.count > 0)
-            {
-                if (parameters == nil)
-                {
-                    parameters = additionalParameters;
-                }
-                else
-                {
-                    // delegate-provided parameters are applied on top
-                    NSMutableDictionary *temp = [[NSMutableDictionary alloc] initWithDictionary:parameters];
-                    [temp addEntriesFromDictionary:additionalParameters];
-                    parameters = temp;
-                }
-            }
+            parameters = SEDataRequestDictionaryWithAdditionalParameters(parameters, service, _requestDelegate, method, path);
         }
         
         if (parameters == nil || parameters.count == 0) return SEDataRequestValidateAndCreateURL(baseURL, path);
@@ -262,7 +321,7 @@ static inline NSURL *SEDataRequestMakeURL(NSURL *baseURL, NSString *path, NSDict
     }
 }
 
-- (NSData *)buildRequestDataWithBody:(id)body mimeType:(NSString *)mimeType charset:(NSString *)charset contentTypeOut:(NSString * __autoreleasing *)contentTypeOut error: (NSError * __autoreleasing *) error
+- (NSData *)buildRequestDataWithService:(id)service method:(NSString *)method path:(NSString *)path body:(id)body mimeType:(NSString *)mimeType charset:(NSString *)charset contentTypeOut:(NSString * __autoreleasing *)contentTypeOut error: (NSError * __autoreleasing *) error
 {
     if (contentTypeOut == nil) THROW_INVALID_PARAM(contentTypeOut, nil);
 
@@ -280,9 +339,9 @@ static inline NSURL *SEDataRequestMakeURL(NSURL *baseURL, NSString *path, NSDict
             return SEDataRequestAssignErrorFromMessage(message, error);
         }
         
-        if (isDictionary && serializer.supportsAdditionalParameters)
+        if (_isSecure && _requestDelegate && isDictionary && serializer.supportsAdditionalParameters)
         {
-            // TODO: append data
+            body = SEDataRequestDictionaryWithAdditionalParameters(body, service, _requestDelegate, method, path);
         }
         
         data = [serializer serializeObject:body mimeType:mimeType error:&serializationError];
@@ -300,9 +359,9 @@ static inline NSURL *SEDataRequestMakeURL(NSURL *baseURL, NSString *path, NSDict
     }
     else if (isDictionary || [body isKindOfClass:[NSArray class]] || [body isKindOfClass:[NSNumber class]])
     {
-        if (isDictionary)
+        if (_isSecure && _requestDelegate && isDictionary)
         {
-            // TODO: append data
+            body = SEDataRequestDictionaryWithAdditionalParameters(body, service, _requestDelegate, method, path);
         }
         NSError *jsonError = nil;
         data = [SEJSONDataSerializer serializeObject:body error:error];
@@ -324,21 +383,19 @@ static inline NSURL *SEDataRequestMakeURL(NSURL *baseURL, NSString *path, NSDict
     return data;
 }
 
-- (void)applyGlobalAndDelegateSettingsForAuthorizedRequest:(NSMutableURLRequest *)request method:(NSString *)method path:(NSString *)path
+- (void)applyGlobalAndDelegateSettingsForAuthorizedRequest:(NSMutableURLRequest *)request withService:(id)service method:(NSString *)method path:(NSString *)path
 {
     NSAssert(_isSecure, @"Global settings only apply to secure requests");
     
     if (_requestDelegate != nil)
     {
-        NSDictionary<NSString *, NSString *> *headers = [_requestDelegate dataRequestService:_service additionalHeadersForRequestMethod:method path:path];
+        NSDictionary<NSString *, NSString *> *headers = [_requestDelegate dataRequestService:service additionalHeadersForRequestMethod:method path:path];
         for (NSString *header in headers)
         {
             NSString *value = [headers objectForKey:header];
             [request setValue:value forHTTPHeaderField:header];
         }
     }
-
-    // TODO: add request preparation delegate stuff here.
 
     NSString *authorizationHeader = self.authorizationHeader;
     if (authorizationHeader != nil) [request setValue:authorizationHeader forHTTPHeaderField:@"Authorization"];
