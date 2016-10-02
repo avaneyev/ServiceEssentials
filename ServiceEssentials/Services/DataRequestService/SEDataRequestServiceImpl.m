@@ -9,39 +9,27 @@
 //
 
 #import "SEDataRequestServiceImpl.h"
+#import "SEDataRequestServicePrivate.h"
 
 #include <pthread.h>
 #if defined(__IPHONE_OS_VERSION_MIN_REQUIRED)
 @import UIKit;
 #endif
 
-#import "SEDataRequestServicePrivate.h"
-#import "SETools.h"
 #import "NSString+SEExtensions.h"
+#import "SETools.h"
+#import "SEDataRequestFactory.h"
+#import "SEDataRequestServiceSecurityHelper.h"
+#import "SEDataRequestServiceUserAgent.h"
+#import "SEDataSerializer.h"
 #import "SEEnvironmentService.h"
 #import "SEInternalDataRequest.h"
-#import "SEDataRequestFactory.h"
-
-#import "SEDataSerializer.h"
+#import "SEInternalDataRequestBuilder.h"
 #import "SEJSONDataSerializer.h"
+#import "SEMultipartRequestContentStream.h"
+#import "SENetworkReachabilityTracker.h"
 #import "SEPlainTextSerializer.h"
 #import "SEWebFormSerializer.h"
-#import "SEDataRequestServiceSecurityHelper.h"
-#import "SENetworkReachabilityTracker.h"
-#import "SEInternalDataRequestBuilder.h"
-#import "SEMultipartRequestContentStream.h"
-#import "SEDataRequestServiceUserAgent.h"
-
-// Always returns nil, it's a shortcut to make a one-liner statement that creates an error and returns no data.
-static inline id SEDataRequestServiceGracefulHandleError(NSString *message, NSError * __autoreleasing *error)
-{
-    if (error != nil)
-    {
-        *error = [NSError errorWithDomain:SEErrorDomain code:SEDataRequestServiceRequestSubmissuionFailure userInfo:@{NSLocalizedDescriptionKey: message}];
-    }
-    SELog(@"%@", message);
-    return nil;
-}
 
 // Pair of macros to enter and leave the critical section
 #define ENTER_CRITICAL_SECTION(service)           \
@@ -112,6 +100,7 @@ NSString * _Nonnull const SEDataRequestMethodHEAD = @"HEAD";
     SEDataRequestFactory *_unsafeRequestFactory;
     
     id<SEEnvironmentService> _environmentService;
+    pthread_mutex_t _baseURLLock;
     NSURL *_baseURL;
     SEDataRequestCertificatePinningType _pinningType;
 
@@ -198,7 +187,7 @@ NSString * _Nonnull const SEDataRequestMethodHEAD = @"HEAD";
 #endif
         
         // track connectivity/reachability
-        [self createReachabilityTrackerIfAvailable];
+        [self createReachabilityTrackerIfAvailableForURL:_baseURL];
     }
     return self;
 }
@@ -271,22 +260,45 @@ static inline void SEDataRequestServiceKillAllTasksAndCleanup(__unsafe_unretaine
 - (void) onUpdateEnvironment: (NSNotification *) notification
 {
     NSURL *newUrl = [_environmentService environmentBaseURL];
-    ENTER_CRITICAL_SECTION(self)
+    @try
+    {
+        pthread_mutex_lock(&_baseURLLock);
         if (![newUrl isEqual:_baseURL])
         {
             _baseURL = [_environmentService environmentBaseURL];
-            [self createReachabilityTrackerIfAvailable];
-
+            [self createReachabilityTrackerIfAvailableForURL:_baseURL];
+            
             // TODO: implement the rest of environment switch if needed (cancel requests and so on)
         }
-    LEAVE_CRITICAL_SECTION(self)
+    }
+    @finally
+    {
+        pthread_mutex_unlock(&_baseURLLock);
+    }
 }
 
-- (void)createReachabilityTrackerIfAvailable
+- (NSURL *)safeBaseURL
+{
+    NSURL *baseURL = nil;
+    @try
+    {
+        pthread_mutex_lock(&_baseURLLock);
+
+        baseURL = [_baseURL copy];
+    }
+    @finally
+    {
+        pthread_mutex_unlock(&_baseURLLock);
+    }
+    
+    return baseURL;
+}
+
+- (void)createReachabilityTrackerIfAvailableForURL:(NSURL *)url
 {
     if ([SENetworkReachabilityTracker isReachabilityAvailable])
     {
-        _reachabilityTracker = [[SENetworkReachabilityTracker alloc] initWithURL:_baseURL delegate:self dispatchQueue:dispatch_get_main_queue()];
+        _reachabilityTracker = [[SENetworkReachabilityTracker alloc] initWithURL:url delegate:self dispatchQueue:dispatch_get_main_queue()];
     }
 }
 
@@ -361,15 +373,11 @@ static inline void SEDataRequestServiceKillAllTasksAndCleanup(__unsafe_unretaine
     if (path == nil) THROW_INVALID_PARAM(url, @{ NSLocalizedDescriptionKey: @"Invalid URL"} );
     if (saveAsURL == nil || ![saveAsURL isFileURL]) THROW_INVALID_PARAM(saveAsURL, @{ NSLocalizedDescriptionKey: @"Invalid URL to save a file" });
 
-    BOOL needsBody = NO;
     NSError *error = nil;
-    NSURL *url = [self buildURLWithPath:path forMethod:SEDataRequestMethodGET body:parameters needsBodyData:&needsBody error:&error];
+    NSURLRequest *request = [_secureRequestFactory createDownloadRequestWithBaseURL:[self safeBaseURL] path:path body:parameters error:&error];
     
-    if (url == nil)
+    if (request == nil)
     {
-#ifdef DEBUG
-        HANDLE_BUILD_REQUEST_ERROR(error.localizedDescription);
-#endif
         if (failure != nil)
         {
             if (error == nil) error = [NSError errorWithDomain:SEErrorDomain code:SEDataRequestServiceRequestSubmissuionFailure userInfo:@{ NSLocalizedDescriptionKey: @"Invalid URL" }];
@@ -379,8 +387,6 @@ static inline void SEDataRequestServiceKillAllTasksAndCleanup(__unsafe_unretaine
     }
     else
     {
-        NSMutableURLRequest *request = [self createRequestWithMethod:SEDataRequestMethodGET authorized:YES url:url data:nil contentType:nil acceptContentType:SEDataRequestAcceptContentTypeData charset:nil];
-        
         return [self createDownloadRequestWithURLRequest:request qos:SEDataRequestQOSDefault saveFileAs:saveAsURL expectedHTTPCodes:nil success:success failure:failure progress:progress completionQueue:completionQueue];
     }
 }
@@ -398,8 +404,9 @@ static inline void SEDataRequestServiceKillAllTasksAndCleanup(__unsafe_unretaine
         SecTrustRef serverTrust = challenge.protectionSpace.serverTrust;
         NSError *error = nil;
         
+        NSURL *baseURL = [self safeBaseURL];
         SEDataRequestCertificatePinningType pinningType = _pinningType;
-        if (![challenge.protectionSpace.host isEqualToString:_baseURL.host]) pinningType = SEDataRequestCertificatePinningTypeNone;
+        if (![challenge.protectionSpace.host isEqualToString:baseURL.host]) pinningType = SEDataRequestCertificatePinningTypeNone;
         
         switch (pinningType)
         {
@@ -490,7 +497,7 @@ static inline void SEDataRequestServiceKillAllTasksAndCleanup(__unsafe_unretaine
     if (request) [request cancelAndNotifyComplete:YES];
 }
 
-- (void) completeInternalRequest:(SEInternalDataRequest *)request
+- (void)completeInternalRequest:(SEInternalDataRequest *)request
 {
     ENTER_CRITICAL_SECTION(self)
         [_internalRequestsByKey removeObjectForKey:request.token];
@@ -521,44 +528,37 @@ static inline void SEDataRequestServiceKillAllTasksAndCleanup(__unsafe_unretaine
 - (id<SECancellableToken>)submitRequestWithBuilder:(SEInternalDataRequestBuilder *)requestBuilder asUpload:(BOOL)asUpload
 {
     NSError *error = nil;
-    NSMutableURLRequest *baseRequest;
+    NSURLRequest *request;
     if (requestBuilder.contentParts == nil)
     {
         // regular, non-multipart request
-        baseRequest = [self buildRequestWithMethod:requestBuilder.method path:requestBuilder.path body:requestBuilder.bodyParameters mimeType:requestBuilder.contentEncoding acceptContentType:requestBuilder.acceptContentType error:&error];
+        request = [_secureRequestFactory createRequestWithBuilder:requestBuilder baseURL:[self safeBaseURL] error:&error];
         
-        if (baseRequest != nil)
-        {
-            SEAssignHeadersToURLRequest(baseRequest, requestBuilder.headers);
-            
+        if (request != nil)
+        {            
             if (asUpload)
             {
-                return [self createDataRequestWithURLRequest:baseRequest qos:requestBuilder.qualityOfService dataClass:requestBuilder.deserializeClass expectedHTTPCodes:requestBuilder.expectedHTTPCodes success:requestBuilder.success failure:requestBuilder.failure completionQueue:requestBuilder.completionQueue];
+                return [self createDataRequestWithURLRequest:request qos:requestBuilder.qualityOfService dataClass:requestBuilder.deserializeClass expectedHTTPCodes:requestBuilder.expectedHTTPCodes success:requestBuilder.success failure:requestBuilder.failure completionQueue:requestBuilder.completionQueue];
             }
             else
             {
-                return [self createUploadRequestWithURLRequest:baseRequest qos:requestBuilder.qualityOfService data:baseRequest.HTTPBody dataClass:requestBuilder.deserializeClass expectedHTTPCodes:requestBuilder.expectedHTTPCodes success:requestBuilder.success failure:requestBuilder.failure completionQueue:requestBuilder.completionQueue];
+                return [self createUploadRequestWithURLRequest:request qos:requestBuilder.qualityOfService data:request.HTTPBody dataClass:requestBuilder.deserializeClass expectedHTTPCodes:requestBuilder.expectedHTTPCodes success:requestBuilder.success failure:requestBuilder.failure completionQueue:requestBuilder.completionQueue];
             }
         }
     }
     else
     {
         // multipart request
-        baseRequest = [self createRequestWithMethod:requestBuilder.method authorized:YES url:[self validateAndCreateURLWithPath:requestBuilder.path] data:nil contentType:nil acceptContentType:SEDataRequestAcceptContentTypeData charset:nil];
-
         NSString *boundary = [NSString randomStringOfLength:10];
-        NSString *mimeType = [NSString stringWithFormat:@"multipart/form-data; boundary=%@", boundary];
-        [baseRequest setValue:mimeType forHTTPHeaderField:@"Content-Type"];
+        request = [_secureRequestFactory createMultipartRequestWithBuilder:requestBuilder baseURL:[self safeBaseURL] boundary:boundary error:&error];
         
-        SEAssignHeadersToURLRequest(baseRequest, requestBuilder.headers);
-
-        unsigned long long contentLength = [SEMultipartRequestContentStream contentLengthForParts:requestBuilder.contentParts boundary:boundary stringEncoding:SEDataRequestServiceStringEncoding];
-            [baseRequest setValue:[NSString stringWithFormat:@"%llu", contentLength] forHTTPHeaderField:@"Content-Length"];
-            
-        return [self createStreamedUploadRequestWithURLRequest:baseRequest qos:requestBuilder.qualityOfService dataClass:requestBuilder.deserializeClass expectedHTTPCodes:requestBuilder.expectedHTTPCodes multipartContents:requestBuilder.contentParts boundary:boundary success:requestBuilder.success failure:requestBuilder.failure completionQueue:requestBuilder.completionQueue];
+        if (request != nil)
+        {
+            return [self createStreamedUploadRequestWithURLRequest:request qos:requestBuilder.qualityOfService dataClass:requestBuilder.deserializeClass expectedHTTPCodes:requestBuilder.expectedHTTPCodes multipartContents:requestBuilder.contentParts boundary:boundary success:requestBuilder.success failure:requestBuilder.failure completionQueue:requestBuilder.completionQueue];
+        }
     }
     
-    if (error && requestBuilder.failure != nil)
+    if (error != nil && requestBuilder.failure != nil)
     {
         dispatch_async(requestBuilder.completionQueue, ^{ requestBuilder.failure(error); });
     }
@@ -588,15 +588,9 @@ static inline void SEDataRequestServiceKillAllTasksAndCleanup(__unsafe_unretaine
 static inline SEInternalDataRequest *SEDataRequestServiceInterlockedGetRequest(SEDataRequestServiceImpl *service, NSURLSessionTask *task)
 {
     SEInternalDataRequest *dataRequest = nil;
-    @try
-    {
-        pthread_mutex_lock(&(service->_requestLock));
+    ENTER_CRITICAL_SECTION(service)
         dataRequest = [service->_internalRequestsByTask objectForKey:@(task.taskIdentifier)];
-    }
-    @finally
-    {
-        pthread_mutex_unlock(&(service->_requestLock));
-    }
+    LEAVE_CRITICAL_SECTION(service)
     return dataRequest;
 }
 
@@ -665,7 +659,7 @@ static inline SEInternalDataRequest *SEDataRequestServiceInterlockedGetRequest(S
 
 #pragma mark - request building
 
-- (id<SECancellableToken>) buildAndSubmitSimpleRequestWithMethod:(NSString *)method path:(NSString *)path parameters:(NSDictionary *)parameters mimeType:(NSString *)mimeType deserializationClass:(Class)class success:(void (^)(id, NSURLResponse *))success failure:(void (^)(NSError *))failure completionQueue:(dispatch_queue_t)completionQueue
+- (id<SECancellableToken>)buildAndSubmitSimpleRequestWithMethod:(NSString *)method path:(NSString *)path parameters:(NSDictionary *)parameters mimeType:(NSString *)mimeType deserializationClass:(Class)class success:(void (^)(id, NSURLResponse *))success failure:(void (^)(NSError *))failure completionQueue:(dispatch_queue_t)completionQueue
 {
     if (class != nil && SEVerifyClassForDeserialization(class, failure, completionQueue))
     {
@@ -673,7 +667,7 @@ static inline SEInternalDataRequest *SEDataRequestServiceInterlockedGetRequest(S
     }
     
     NSError *error = nil;
-    NSURLRequest *urlRequest = [self buildRequestWithMethod:method path:path body:parameters mimeType:mimeType acceptContentType:SEDataRequestAcceptContentTypeJSON error:&error];
+    NSURLRequest *urlRequest = [_secureRequestFactory createRequestWithMethod:method baseURL:[self safeBaseURL] path:path body:parameters mimeType:mimeType error:&error];
     
     if (urlRequest != nil)
     {
@@ -737,174 +731,6 @@ static inline SEInternalDataRequest *SEDataRequestServiceInterlockedGetRequest(S
     return internalRequest.token;
 }
 
-- (NSURL *) buildURLWithPath:(NSString *)path forMethod:(NSString *)method body:(id)body needsBodyData:(BOOL *)needsBody error: (NSError * __autoreleasing *) error
-{
-    NSURL *fullUrl;
-    *needsBody = NO;
-    if ([method isEqualToString:SEDataRequestMethodGET] || [method isEqualToString:SEDataRequestMethodHEAD] || [method isEqualToString:SEDataRequestMethodDELETE])
-    {
-        if (body != nil)
-        {
-            if ([body isKindOfClass:[NSDictionary class]])
-            {
-                fullUrl = [self makeURLWithPath:path parameters:body];
-            }
-            else
-            {
-                NSString *message = [NSString stringWithFormat:@"Not a valid body type for %@ request: %@", method, [body class]];
-                HANDLE_BUILD_REQUEST_ERROR(message);
-            }
-        }
-        else
-        {
-            fullUrl = [self validateAndCreateURLWithPath:path];
-        }
-    }
-    else
-    {
-        fullUrl = [self validateAndCreateURLWithPath:path];
-        *needsBody = YES;
-    }
-    return fullUrl;
-}
-
-- (NSData *) buildRequestDataWithBody:(id)body mimeType:(NSString *)mimeType charset:(NSString *)charset contentTypeOut:(NSString * __autoreleasing *)contentTypeOut error: (NSError * __autoreleasing *) error
-{
-    if (contentTypeOut == nil) THROW_INVALID_PARAM(contentTypeOut, nil);
-    
-    NSData *data = nil;
-    NSString *contentType = nil;
-
-    if (mimeType != nil)
-    {
-        NSError *serializationError = nil;
-        SEDataSerializer *serializer = [_dataSerializers objectForKey:mimeType];
-        if (serializer == nil)
-        {
-            NSString *message = [NSString stringWithFormat:@"Serializer not found for type %@", mimeType];
-            return SEDataRequestServiceGracefulHandleError(message, error);
-        }
-        data = [serializer serializeObject:body mimeType:mimeType error:&serializationError];
-        if (serializationError != nil)
-        {
-            if (error) *error = serializationError;
-            SELog("Failed to serialize request data: %@", serializationError);
-            return nil;
-        }
-        contentType = [NSString stringWithFormat:@"%@; charset=%@", mimeType, charset];
-    }
-    else if ([body isKindOfClass:[NSString class]])
-    {
-        NSString *text = body;
-        data = [text dataUsingEncoding:SEDataRequestServiceStringEncoding];
-        contentType = [NSString stringWithFormat:@"text/plain; charset=%@", charset];
-    }
-    else if ([body isKindOfClass:[NSArray class]] || [body isKindOfClass:[NSDictionary class]] || [body isKindOfClass:[NSNumber class]])
-    {
-        NSError *jsonError = nil;
-        data = [NSJSONSerialization dataWithJSONObject:body options:0 error:&jsonError];
-        
-        if (jsonError != nil)
-        {
-            if (error) *error = jsonError;
-            SELog("Failed to serialize request data: %@", jsonError);
-            return nil;
-        }
-        
-        contentType = [NSString stringWithFormat:@"application/json; charset=%@", charset];
-    }
-    else
-    {
-        NSString *message = [NSString stringWithFormat:@"Not a valid request data type: %@", [body class]];
-        return SEDataRequestServiceGracefulHandleError(message, error);
-    }
-
-    *contentTypeOut = contentType;
-    return data;
-}
-
-- (void)applyGlobalAndDelegateSettingsForAuthorizedRequest:(NSMutableURLRequest *)request
-{
-    NSAssert([request.URL.host isEqualToString:_baseURL.host], @"Only applies to requests sent to authorized host");
-
-    // TODO: add request preparation delegate stuff here.
-
-    NSString *authorizationHeader = _secureRequestFactory.authorizationHeader;
-    if (authorizationHeader != nil) [request setValue:authorizationHeader forHTTPHeaderField:@"Authorization"];
-}
-
-- (NSMutableURLRequest *)createRequestWithMethod:(NSString *)method authorized:(BOOL)authorized url:(NSURL *)url data:(NSData *)data contentType:(NSString *)contentType acceptContentType:(SEDataRequestAcceptContentType)acceptType charset:(NSString *)charset
-{
-    NSMutableURLRequest *request = [[NSMutableURLRequest alloc] init];
-    [request setHTTPMethod:method];
-    [request setURL:url];
-    
-    NSString *userAgent = _secureRequestFactory.userAgent;
-    if (userAgent) [request setValue:userAgent forHTTPHeaderField:@"User-Agent"];
-
-    if (authorized)
-    {
-        [self applyGlobalAndDelegateSettingsForAuthorizedRequest:request];
-    }
-
-    if (acceptType == SEDataRequestAcceptContentTypeJSON)
-    {
-        NSString *acceptHeader = [NSString stringWithFormat:@"application/json; charset=%@", charset];
-        [request setValue:acceptHeader forHTTPHeaderField:@"Accept"];
-    }
-    
-    if (data)
-    {
-        [request setValue:contentType forHTTPHeaderField:@"Content-Type"];
-        [request setHTTPBody:data];
-    }
-    
-    return request;
-}
-
-- (NSMutableURLRequest *)buildRequestWithMethod:(NSString *)method path:(NSString *)path body:(id)body mimeType:(NSString *)mimeType acceptContentType:(SEDataRequestAcceptContentType)acceptType error:(NSError * __autoreleasing *)error
-{
-    // compose the URL
-    BOOL needsBody = NO;
-    NSURL *fullUrl = [self buildURLWithPath:path forMethod:method body:body needsBodyData:&needsBody error:error];
-    
-    if (fullUrl == nil)
-    {
-        NSString *message = [NSString stringWithFormat:@"Not a valid request URL combination of path [%@], base [%@] and parameters [%@]", path, _baseURL, needsBody ? @"n/a" : body];
-        HANDLE_BUILD_REQUEST_ERROR(message);
-    }
-    
-    // if necessary - create the request body
-    NSString *charset = (__bridge NSString *)CFStringConvertEncodingToIANACharSetName(CFStringConvertNSStringEncodingToEncoding(SEDataRequestServiceStringEncoding));
-    NSString *contentType = nil;
-    NSData *data = nil;
-
-    if (needsBody && (body != nil))
-    {
-        data = [self buildRequestDataWithBody:body mimeType:mimeType charset:charset contentTypeOut:&contentType error:error];
-        if (data == nil) return nil;
-    }
-    
-    // assign everything to a request
-    return [self createRequestWithMethod:method authorized:YES url:fullUrl data:data contentType:contentType acceptContentType:acceptType charset:charset];
-}
-
-- (NSURL *)makeURLWithPath: (NSString *) path parameters: (NSDictionary *) parameters
-{
-    NSString *urEncodedParameters = [SEWebFormSerializer webFormEncodedStringFromDictionary:parameters withEncoding:NSUTF8StringEncoding];
-    NSString *appendString = ([path rangeOfString:@"?"].location == NSNotFound) ? @"?" : @"&";
-    return [self validateAndCreateURLWithPath:[NSString stringWithFormat:@"%@%@%@", path, appendString, urEncodedParameters]];
-}
-
-- (NSURL *)validateAndCreateURLWithPath:(NSString *)path
-{
-    NSURL *url = [NSURL URLWithString:path relativeToURL:_baseURL];
-    if (![url.scheme isEqualToString:_baseURL.scheme] || ![url.host isEqualToString:_baseURL.host])
-    {
-        THROW_INVALID_PARAM(path, @{ NSLocalizedDescriptionKey: @"Path is not really a path, it modifies host or scheme and cannot be accepted." });
-    }
-    return url;
-}
 
 #pragma mark - Reachability Tracking Delegation
 

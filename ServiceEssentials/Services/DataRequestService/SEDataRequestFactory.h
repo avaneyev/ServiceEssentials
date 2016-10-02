@@ -28,10 +28,19 @@
                                          mimeType:(nullable NSString *)mimeType
                                             error:(NSError * __autoreleasing _Nullable * _Nullable)error;
 
+- (nonnull NSURLRequest *)createDownloadRequestWithBaseURL:(nonnull NSURL *)baseURL
+                                                      path:(nullable NSString *)path
+                                                      body:(nullable id)body
+                                                     error:(NSError * __autoreleasing _Nullable * _Nullable)error;
+
 - (nonnull NSURLRequest *)createRequestWithBuilder:(nonnull SEInternalDataRequestBuilder *)builder
                                            baseURL:(nonnull NSURL *)baseURL
-                                          asUpload:(BOOL)asUpload
                                              error:(NSError * __autoreleasing _Nullable * _Nullable)error;
+
+- (nonnull NSURLRequest *)createMultipartRequestWithBuilder:(nonnull SEInternalDataRequestBuilder *)builder
+                                                    baseURL:(nonnull NSURL *)baseURL
+                                                   boundary:(nonnull NSString *)boundary
+                                                      error:(NSError * __autoreleasing _Nullable * _Nullable)error;
 
 - (nonnull NSURLRequest *)createUnsafeRequestWithMethod:(nonnull NSString *)method
                                                     URL:(nonnull NSURL *)url

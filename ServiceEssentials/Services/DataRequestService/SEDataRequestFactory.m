@@ -12,11 +12,13 @@
 
 #include <pthread.h>
 
-#import "SETools.h"
 #import "SEDataRequestServicePrivate.h"
 #import "SEDataSerializer.h"
-#import "SEWebFormSerializer.h"
 #import "SEJSONDataSerializer.h"
+#import "SEInternalDataRequestBuilder.h"
+#import "SEMultipartRequestContentStream.h"
+#import "SETools.h"
+#import "SEWebFormSerializer.h"
 
 #define CHECK_IF_SECURE do { if (!_isSecure) THROW_NOT_IMPLEMENTED((@{ NSLocalizedDescriptionKey: [NSString stringWithFormat:@"%@ is not implemented for non-secure request factory", NSStringFromSelector(_cmd)] })); } while(0)
 
@@ -178,20 +180,89 @@ static inline BOOL SEDataRequestMethodURLEncodesBody(NSString *method)
     id service = _service;
     if (service == nil) return nil;
 
-    return [self buildRequestWithService:service method:method baseURL:baseURL path:path body:body mimeType:mimeType acceptContentType:SEDataRequestAcceptContentTypeJSON error:error];
+    return [self buildRequestWithService:service
+                                  method:method
+                                 baseURL:baseURL
+                                    path:path
+                                    body:body
+                                mimeType:mimeType
+                                 headers:nil
+                       acceptContentType:SEDataRequestAcceptContentTypeJSON
+                                   error:error];
+}
+
+- (NSURLRequest *)createDownloadRequestWithBaseURL:(NSURL *)baseURL
+                                              path:(NSString *)path
+                                              body:(id)body
+                                             error:(NSError * _Nullable __autoreleasing *)error
+{
+    CHECK_IF_SECURE;
+    
+    // since service is weak-referenced, retain it for the duration of request making and pass around
+    id service = _service;
+    if (service == nil) return nil;
+    
+    return [self buildRequestWithService:service
+                                  method:SEDataRequestMethodGET
+                                 baseURL:baseURL
+                                    path:path
+                                    body:body
+                                mimeType:nil
+                                 headers:nil
+                       acceptContentType:SEDataRequestAcceptContentTypeData
+                                   error:error];
 }
 
 - (NSURLRequest *)createRequestWithBuilder:(SEInternalDataRequestBuilder *)builder
                                    baseURL:(NSURL *)baseURL
-                                  asUpload:(BOOL)asUpload
                                      error:(NSError * _Nullable __autoreleasing *)error
 {
     CHECK_IF_SECURE;
-
+    
+    // since service is weak-referenced, retain it for the duration of request making and pass around
     id service = _service;
     if (service == nil) return nil;
+    
+    return [self buildRequestWithService:service
+                                  method:builder.method
+                                 baseURL:baseURL
+                                    path:builder.path
+                                    body:builder.bodyParameters
+                                mimeType:builder.contentEncoding
+                                 headers:builder.headers
+                       acceptContentType:builder.acceptContentType
+                                   error:error];
+}
 
-    return nil;
+- (NSURLRequest *)createMultipartRequestWithBuilder:(SEInternalDataRequestBuilder *)builder
+                                            baseURL:(NSURL *)baseURL
+                                           boundary:(NSString *)boundary
+                                              error:(NSError * _Nullable __autoreleasing *)error
+{
+    CHECK_IF_SECURE;
+    
+    // since service is weak-referenced, retain it for the duration of request making and pass around
+    id<SEDataRequestServicePrivate> service = _service;
+    if (service == nil) return nil;
+
+    NSMutableURLRequest *request = [self buildRequestWithService:service
+                                                          method:builder.method
+                                                         baseURL:baseURL
+                                                            path:builder.path
+                                                            body:nil
+                                                        mimeType:nil
+                                                         headers:builder.headers
+                                               acceptContentType:builder.acceptContentType
+                                                           error:error];
+
+    // Setting content-type and content-length in the very end to ensure they are consistent with the request.
+    NSString *mimeType = [NSString stringWithFormat:@"multipart/form-data; boundary=%@", boundary];
+    [request setValue:mimeType forHTTPHeaderField:@"Content-Type"];
+    
+    unsigned long long contentLength = [SEMultipartRequestContentStream contentLengthForParts:builder.contentParts boundary:boundary stringEncoding:[service stringEncoding]];
+    [request setValue:[NSString stringWithFormat:@"%llu", contentLength] forHTTPHeaderField:@"Content-Length"];
+
+    return request;
 }
 
 - (NSURLRequest *)createUnsafeRequestWithMethod:(NSString *)method
@@ -240,7 +311,7 @@ static inline BOOL SEDataRequestMethodURLEncodesBody(NSString *method)
 
 #pragma mark - Internal building functions
 
-- (NSMutableURLRequest *)buildRequestWithService:(id)service method:(NSString *)method baseURL:(NSURL *)baseURL path:(NSString *)path body:(id)body mimeType:(NSString *)mimeType acceptContentType:(SEDataRequestAcceptContentType)acceptType error:(NSError * __autoreleasing *)error
+- (NSMutableURLRequest *)buildRequestWithService:(id)service method:(NSString *)method baseURL:(NSURL *)baseURL path:(NSString *)path body:(id)body mimeType:(NSString *)mimeType headers:(NSDictionary<NSString *, NSString *> *)headers acceptContentType:(SEDataRequestAcceptContentType)acceptType error:(NSError * __autoreleasing *)error
 {
     // compose the URL
     BOOL needsBody = NO;
@@ -264,10 +335,10 @@ static inline BOOL SEDataRequestMethodURLEncodesBody(NSString *method)
     }
 
     // assign everything to a request
-    return [self createRequestWithService:service method:method path:path url:fullUrl data:data contentType:contentType acceptContentType:acceptType charset:charset];
+    return [self createRequestWithService:service method:method path:path url:fullUrl data:data contentType:contentType headers:headers acceptContentType:acceptType charset:charset];
 }
 
-- (NSMutableURLRequest *)createRequestWithService:(id)service method:(NSString *)method path:(NSString *)path url:(NSURL *)url data:(NSData *)data contentType:(NSString *)contentType acceptContentType:(SEDataRequestAcceptContentType)acceptType charset:(NSString *)charset
+- (NSMutableURLRequest *)createRequestWithService:(id)service method:(NSString *)method path:(NSString *)path url:(NSURL *)url data:(NSData *)data contentType:(NSString *)contentType headers:(NSDictionary<NSString *, NSString *> *)headers acceptContentType:(SEDataRequestAcceptContentType)acceptType charset:(NSString *)charset
 {
     NSMutableURLRequest *request = [[NSMutableURLRequest alloc] init];
     [request setHTTPMethod:method];
@@ -275,15 +346,17 @@ static inline BOOL SEDataRequestMethodURLEncodesBody(NSString *method)
 
     if (_userAgent) [request setValue:_userAgent forHTTPHeaderField:@"User-Agent"];
 
-    if (_isSecure)
-    {
-        [self applyGlobalAndDelegateSettingsForAuthorizedRequest:request withService:service method:method path:path];
-    }
-
     if (acceptType == SEDataRequestAcceptContentTypeJSON)
     {
         NSString *acceptHeader = [NSString stringWithFormat:@"application/json; charset=%@", charset];
         [request setValue:acceptHeader forHTTPHeaderField:@"Accept"];
+    }
+    
+    SEAssignHeadersToURLRequest(request, headers);
+
+    if (_isSecure)
+    {
+        [self applyGlobalAndDelegateSettingsForAuthorizedRequest:request withService:service method:method path:path];
     }
 
     if (data)
@@ -390,11 +463,7 @@ static inline BOOL SEDataRequestMethodURLEncodesBody(NSString *method)
     if (_requestDelegate != nil)
     {
         NSDictionary<NSString *, NSString *> *headers = [_requestDelegate dataRequestService:service additionalHeadersForRequestMethod:method path:path];
-        for (NSString *header in headers)
-        {
-            NSString *value = [headers objectForKey:header];
-            [request setValue:value forHTTPHeaderField:header];
-        }
+        SEAssignHeadersToURLRequest(request, headers);
     }
 
     NSString *authorizationHeader = self.authorizationHeader;
