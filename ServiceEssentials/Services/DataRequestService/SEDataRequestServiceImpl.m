@@ -661,7 +661,7 @@ static inline SEInternalDataRequest *SEDataRequestServiceInterlockedGetRequest(S
 
 - (id<SECancellableToken>)buildAndSubmitSimpleRequestWithMethod:(NSString *)method path:(NSString *)path parameters:(NSDictionary *)parameters mimeType:(NSString *)mimeType deserializationClass:(Class)class success:(void (^)(id, NSURLResponse *))success failure:(void (^)(NSError *))failure completionQueue:(dispatch_queue_t)completionQueue
 {
-    if (class != nil && SEVerifyClassForDeserialization(class, failure, completionQueue))
+    if (class != nil && !SEVerifyClassForDeserialization(class, failure, completionQueue))
     {
         return nil;
     }
