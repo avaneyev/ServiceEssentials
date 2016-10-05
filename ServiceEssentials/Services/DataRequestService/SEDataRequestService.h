@@ -318,8 +318,11 @@ typedef enum
  @param method request method, such as `POST` or `GET`.`
  @param url URL being requested.
  @return a dictionary of headers (name-value pairs) that should be added to the request.
+ @discussion This method will be invoked for every request, regardless of method and body type.
+ That is on contrast with additional parameters, which are only applicable to requests that support
+ adding parameters to query string or body.
  */
-- (nullable NSDictionary<NSString *, NSString *> *)dataRequestService:(nonnull id<SEDataRequestService>)dataRequestService additionalHeadersForRequestMethod:(nonnull NSString *)method URL:(nonnull NSURL *)url;
+- (nullable NSDictionary<NSString *, NSString *> *)dataRequestService:(nonnull id<SEDataRequestService>)dataRequestService additionalHeadersForRequestMethod:(nonnull NSString *)method path:(nonnull NSString *)path;
 
 /**
  Queries a delegate for additional parameters that should be added to a request with URL and method.
@@ -329,8 +332,10 @@ typedef enum
  @param method request method, such as `POST` or `GET`.`
  @param url URL being requested.
  @return a dictionary of headers (name-value pairs) that should be added to the request.
+ @discussion This method will only be called when parameters can be added to the request. That includes 
+ requests where parameters become part of the query (GET, HEAD, DELETE) and requests with JSON body.
  */
-- (nullable NSDictionary<NSString *, id> *)dataRequestService:(nonnull id<SEDataRequestService>)dataRequestService additionalParametersForRequestMethod:(nonnull NSString *)method URL:(nonnull NSURL *)url;
+- (nullable NSDictionary<NSString *, id> *)dataRequestService:(nonnull id<SEDataRequestService>)dataRequestService additionalParametersForRequestMethod:(nonnull NSString *)method path:(nonnull NSString *)path;
 
 @end
 

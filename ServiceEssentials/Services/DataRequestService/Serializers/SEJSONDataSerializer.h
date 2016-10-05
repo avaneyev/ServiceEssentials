@@ -12,4 +12,7 @@
 #import "SEDataSerializer.h"
 
 @interface SEJSONDataSerializer : SEDataSerializer
+
++ (NSData *)serializeObject:(id)object error:(NSError *__autoreleasing *)error;
+
 @end

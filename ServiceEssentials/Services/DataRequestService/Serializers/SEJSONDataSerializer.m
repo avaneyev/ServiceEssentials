@@ -11,9 +11,7 @@
 #import "SEJSONDataSerializer.h"
 #import "SEDataRequestService.h"
 
-@implementation SEJSONDataSerializer
-
-- (NSData *)serializeObject:(id)object mimeType:(NSString *)mimeType error:(NSError *__autoreleasing *)error
+static NSData *_SerializeJSON(id object, NSError *__autoreleasing *error)
 {
     NSError *innerError = nil;
     @try
@@ -34,6 +32,18 @@
         if(error) *error = [NSError errorWithDomain:SEErrorDomain code:SEDataRequestServiceSerializationFailure userInfo:@{NSLocalizedDescriptionKey: exception.description, @"innerException": exception}];
         return nil;
     }
+}
+
+@implementation SEJSONDataSerializer
+
+- (BOOL)supportsAdditionalParameters
+{
+    return YES;
+}
+
+- (NSData *)serializeObject:(id)object mimeType:(NSString *)mimeType error:(NSError *__autoreleasing *)error
+{
+    return _SerializeJSON(object, error);
 }
 
 - (id)deserializeData:(NSData *)data mimeType:(NSString *)mimeType error:(NSError *__autoreleasing *)error
@@ -57,6 +67,13 @@
         if(error) *error = [NSError errorWithDomain:SEErrorDomain code:SEDataRequestServiceSerializationFailure userInfo:@{NSLocalizedDescriptionKey: exception.description, @"innerException": exception}];
         return nil;
     }
+}
+
+#pragma mark - Class method version of the serializer
+
++ (NSData *)serializeObject:(id)object error:(NSError *__autoreleasing *)error
+{
+    return _SerializeJSON(object, error);
 }
 
 @end

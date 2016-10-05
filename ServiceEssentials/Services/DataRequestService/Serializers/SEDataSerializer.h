@@ -12,6 +12,13 @@
 
 @interface SEDataSerializer : NSObject
 
+/**
+ Determines if a serializer supports additional parameters provided by the request preparation delegate.
+ Default implemetation returns `NO`. Subclasses may return `YES` if they are prepared to handle additional parameters
+ merged to the object being serialized.
+ */
+@property (nonatomic, readonly) BOOL supportsAdditionalParameters;
+
 /** Serialize the object to data
  @param object object to be serialized
  @param mimeType data type hint, seializers could use it to extract charset and other encoding parameters

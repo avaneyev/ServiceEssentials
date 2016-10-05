@@ -42,6 +42,11 @@ static inline void AppendQueryComponent(NSMutableString *mutableString, NSString
 
 #pragma mark - Public interface
 
+- (BOOL)supportsAdditionalParameters
+{
+    return YES;
+}
+
 - (NSData *)serializeObject:(id)object mimeType:(NSString *)mimeType error:(NSError *__autoreleasing *)error
 {
     if (![object isKindOfClass:[NSDictionary class]])

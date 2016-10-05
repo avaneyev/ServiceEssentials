@@ -22,6 +22,8 @@
 
 /* Begin PBXBuildFile section */
 		D55F421C1D1AF1A000B84D60 /* ServiceEssentials.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D5A420DC1D16ED5400471135 /* ServiceEssentials.framework */; };
+		D592AD441D90E9EC00108531 /* SEDataRequestFactory.h in Headers */ = {isa = PBXBuildFile; fileRef = D592AD421D90E9EC00108531 /* SEDataRequestFactory.h */; };
+		D592AD451D90E9EC00108531 /* SEDataRequestFactory.m in Sources */ = {isa = PBXBuildFile; fileRef = D592AD431D90E9EC00108531 /* SEDataRequestFactory.m */; };
 		D59737FB1D6A964400629740 /* SEDataRequestServiceUserAgent.h in Headers */ = {isa = PBXBuildFile; fileRef = D59737FA1D6A957000629740 /* SEDataRequestServiceUserAgent.h */; };
 		D5A420E01D16ED5400471135 /* ServiceEssentials.h in Headers */ = {isa = PBXBuildFile; fileRef = D5A420DF1D16ED5400471135 /* ServiceEssentials.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D5A420F91D16EE4000471135 /* SEConstants.h in Headers */ = {isa = PBXBuildFile; fileRef = D5A420F71D16EE4000471135 /* SEConstants.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -95,6 +97,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		D592AD421D90E9EC00108531 /* SEDataRequestFactory.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SEDataRequestFactory.h; sourceTree = "<group>"; };
+		D592AD431D90E9EC00108531 /* SEDataRequestFactory.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SEDataRequestFactory.m; sourceTree = "<group>"; };
 		D59737FA1D6A957000629740 /* SEDataRequestServiceUserAgent.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SEDataRequestServiceUserAgent.h; sourceTree = "<group>"; };
 		D5A420DC1D16ED5400471135 /* ServiceEssentials.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ServiceEssentials.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D5A420DF1D16ED5400471135 /* ServiceEssentials.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ServiceEssentials.h; sourceTree = "<group>"; };
@@ -301,6 +305,8 @@
 				D5A421221D16F0E600471135 /* SEMultipartRequestContentStream.m */,
 				D5A421231D16F0E600471135 /* SENetworkReachabilityTracker.h */,
 				D5A421241D16F0E600471135 /* SENetworkReachabilityTracker.m */,
+				D592AD421D90E9EC00108531 /* SEDataRequestFactory.h */,
+				D592AD431D90E9EC00108531 /* SEDataRequestFactory.m */,
 			);
 			path = DataRequestService;
 			sourceTree = "<group>";
@@ -430,6 +436,7 @@
 				D5A420F91D16EE4000471135 /* SEConstants.h in Headers */,
 				D5A421541D16F0E600471135 /* SEWebFormSerializer.h in Headers */,
 				D5A420E01D16ED5400471135 /* ServiceEssentials.h in Headers */,
+				D592AD441D90E9EC00108531 /* SEDataRequestFactory.h in Headers */,
 				D5A4214E1D16F0E600471135 /* SEDataSerializer.h in Headers */,
 				D5A4215B1D16F0E600471135 /* SEServiceLocator.h in Headers */,
 				D5A421591D16F0E600471135 /* SEPersistenceService.h in Headers */,
@@ -490,7 +497,7 @@
 		D5A420D31D16ED5400471135 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0730;
+				LastUpgradeCheck = 0800;
 				ORGANIZATIONNAME = ServiceEssentials;
 				TargetAttributes = {
 					D5A420DB1D16ED5400471135 = {
@@ -571,6 +578,7 @@
 				D5A421471D16F0E600471135 /* SEInternalDataRequestBuilder.m in Sources */,
 				D5A4210A1D16EE9E00471135 /* NSDictionary+SEJSONExtensions.m in Sources */,
 				D5A421491D16F0E600471135 /* SEMultipartRequestContentPart.m in Sources */,
+				D592AD451D90E9EC00108531 /* SEDataRequestFactory.m in Sources */,
 				D5A4214F1D16F0E600471135 /* SEDataSerializer.m in Sources */,
 				D5A421551D16F0E600471135 /* SEWebFormSerializer.m in Sources */,
 				D5A421511D16F0E600471135 /* SEJSONDataSerializer.m in Sources */,
@@ -625,8 +633,10 @@
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
@@ -673,8 +683,10 @@
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
@@ -704,6 +716,7 @@
 		D5A420F11D16ED5400471135 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -727,6 +740,7 @@
 		D5A420F21D16ED5400471135 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
