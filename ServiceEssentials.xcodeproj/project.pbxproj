@@ -25,6 +25,7 @@
 		D592AD441D90E9EC00108531 /* SEDataRequestFactory.h in Headers */ = {isa = PBXBuildFile; fileRef = D592AD421D90E9EC00108531 /* SEDataRequestFactory.h */; };
 		D592AD451D90E9EC00108531 /* SEDataRequestFactory.m in Sources */ = {isa = PBXBuildFile; fileRef = D592AD431D90E9EC00108531 /* SEDataRequestFactory.m */; };
 		D59737FB1D6A964400629740 /* SEDataRequestServiceUserAgent.h in Headers */ = {isa = PBXBuildFile; fileRef = D59737FA1D6A957000629740 /* SEDataRequestServiceUserAgent.h */; };
+		D59A3B081DA754040089A344 /* SEDataRequestFactoryTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D59A3B071DA754040089A344 /* SEDataRequestFactoryTests.m */; };
 		D5A420E01D16ED5400471135 /* ServiceEssentials.h in Headers */ = {isa = PBXBuildFile; fileRef = D5A420DF1D16ED5400471135 /* ServiceEssentials.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D5A420F91D16EE4000471135 /* SEConstants.h in Headers */ = {isa = PBXBuildFile; fileRef = D5A420F71D16EE4000471135 /* SEConstants.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D5A420FA1D16EE4000471135 /* SEConstants.m in Sources */ = {isa = PBXBuildFile; fileRef = D5A420F81D16EE4000471135 /* SEConstants.m */; };
@@ -100,6 +101,7 @@
 		D592AD421D90E9EC00108531 /* SEDataRequestFactory.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SEDataRequestFactory.h; sourceTree = "<group>"; };
 		D592AD431D90E9EC00108531 /* SEDataRequestFactory.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SEDataRequestFactory.m; sourceTree = "<group>"; };
 		D59737FA1D6A957000629740 /* SEDataRequestServiceUserAgent.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SEDataRequestServiceUserAgent.h; sourceTree = "<group>"; };
+		D59A3B071DA754040089A344 /* SEDataRequestFactoryTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SEDataRequestFactoryTests.m; sourceTree = "<group>"; };
 		D5A420DC1D16ED5400471135 /* ServiceEssentials.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ServiceEssentials.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D5A420DF1D16ED5400471135 /* ServiceEssentials.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ServiceEssentials.h; sourceTree = "<group>"; };
 		D5A420E11D16ED5400471135 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -376,6 +378,7 @@
 				D5A421651D1783F200471135 /* SEMultipartRequestContentStreamTests.m */,
 				D5A421661D1783F200471135 /* SEPlainTextSerializerTests.m */,
 				D5A421671D1783F200471135 /* SEWebFormSerializerTests.m */,
+				D59A3B071DA754040089A344 /* SEDataRequestFactoryTests.m */,
 			);
 			path = DataRequestService;
 			sourceTree = "<group>";
@@ -600,6 +603,7 @@
 				D5A4216E1D1783F200471135 /* SEJSONSerializerTests.m in Sources */,
 				D5A421761D17874A00471135 /* SECancelableTokenTests.m in Sources */,
 				D5A421731D1783F200471135 /* SEPersistenceServiceTests.m in Sources */,
+				D59A3B081DA754040089A344 /* SEDataRequestFactoryTests.m in Sources */,
 				D5A421711D1783F200471135 /* SEWebFormSerializerTests.m in Sources */,
 				D5A4216B1D1783F200471135 /* SEDataRequestBuilderTests.m in Sources */,
 				D5A4216D1D1783F200471135 /* SEDataRequestServiceImplTests.m in Sources */,
