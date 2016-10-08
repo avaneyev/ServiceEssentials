@@ -8,7 +8,7 @@
 //  Distributed under BSD license. See LICENSE for details.
 //
 
-#import "SEMultipartRequestContentPart.h"
+#import <ServiceEssentials/SEMultipartRequestContentPart.h>
 
 @implementation SEMultipartRequestContentPart
 {

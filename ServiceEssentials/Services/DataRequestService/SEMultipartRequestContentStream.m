@@ -8,11 +8,11 @@
 //  Distributed under BSD license. See LICENSE for details.
 //
 
-#import "SEMultipartRequestContentStream.h"
+#import <ServiceEssentials/SEMultipartRequestContentStream.h>
 
 #include <pthread.h>
-#import "SETools.h"
-#import "SEMultipartRequestContentPart.h"
+#import <ServiceEssentials/SETools.h>
+#import <ServiceEssentials/SEMultipartRequestContentPart.h>
 
 static NSString *const SEMultipartStreamContentCRLF = @"\r\n";
 

@@ -9,7 +9,7 @@
 //
 
 #import <Foundation/Foundation.h>
-#import "SEDataRequestService.h"
+#import <ServiceEssentials/SEDataRequestService.h>
 #import "SEDataRequestServicePrivate.h"
 
 @class SEInternalDataRequestBuilder;

@@ -8,8 +8,8 @@
 //  Distributed under BSD license. See LICENSE for details.
 //
 
-#import "SEDataRequestServiceImpl.h"
-#import "SEDataRequestServicePrivate.h"
+#import <ServiceEssentials/SEDataRequestServiceImpl.h>
+#import <ServiceEssentials/SEDataRequestServicePrivate.h>
 
 #include <pthread.h>
 #if defined(__IPHONE_OS_VERSION_MIN_REQUIRED)

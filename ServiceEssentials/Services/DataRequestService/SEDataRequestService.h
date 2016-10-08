@@ -13,9 +13,9 @@
 
 @import Foundation;
 
-#import "SEConstants.h"
-#import "SECancellableToken.h"
-#import "SEDataRequestJSONDeserializable.h"
+#import <ServiceEssentials/SEConstants.h>
+#import <ServiceEssentials/SECancellableToken.h>
+#import <ServiceEssentials/SEDataRequestJSONDeserializable.h>
 
 extern NSString * _Nonnull const SEDataRequestServiceChangedReachabilityNotification;
 extern NSString * _Nonnull const SEDataRequestServiceChangedReachabilityStatusKey;

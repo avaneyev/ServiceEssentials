@@ -8,7 +8,7 @@
 //  Distributed under BSD license. See LICENSE for details.
 //
 
-#import "SEInternalDataRequestBuilder.h"
+#import <ServiceEssentials/SEInternalDataRequestBuilder.h>
 
 #import "SETools.h"
 #import "SEMultipartRequestContentPart.h"

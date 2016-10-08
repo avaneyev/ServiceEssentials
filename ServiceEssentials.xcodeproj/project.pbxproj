@@ -730,6 +730,7 @@
 					"ALLOWS_TEST_ENVIRONMENTS=1",
 					"$(inherited)",
 				);
+				HEADER_SEARCH_PATHS = "$(TARGET_BUILD_DIR)/$(PUBLIC_HEADERS_FOLDER_PATH)";
 				INFOPLIST_FILE = ServiceEssentials/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
@@ -750,6 +751,7 @@
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				GCC_PREPROCESSOR_DEFINITIONS = "ALLOWS_TEST_ENVIRONMENTS=1";
+				HEADER_SEARCH_PATHS = "$(TARGET_BUILD_DIR)/$(PUBLIC_HEADERS_FOLDER_PATH)/**";
 				INFOPLIST_FILE = ServiceEssentials/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
@@ -769,7 +771,10 @@
 					"$(PROJECT_DIR)/ServiceEssentialsTests/Frameworks/OCMock/iOS",
 					"$(DEVELOPER_FRAMEWORKS_DIR)",
 				);
-				HEADER_SEARCH_PATHS = "";
+				HEADER_SEARCH_PATHS = (
+					"$(TARGET_BUILD_DIR)/$(PUBLIC_HEADERS_FOLDER_PATH)",
+					"$(PROJECT_DIR)/**",
+				);
 				INFOPLIST_FILE = ServiceEssentialsTests/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks $(FRAMEWORK_SEARCH_PATHS)";
 				OTHER_LDFLAGS = "-ObjC";
@@ -786,7 +791,10 @@
 					"$(PROJECT_DIR)/ServiceEssentialsTests/Frameworks/OCMock/iOS",
 					"$(DEVELOPER_FRAMEWORKS_DIR)",
 				);
-				HEADER_SEARCH_PATHS = "";
+				HEADER_SEARCH_PATHS = (
+					"$(TARGET_BUILD_DIR)/$(PUBLIC_HEADERS_FOLDER_PATH)",
+					"$(PROJECT_DIR)",
+				);
 				INFOPLIST_FILE = ServiceEssentialsTests/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks $(FRAMEWORK_SEARCH_PATHS)";
 				OTHER_LDFLAGS = "-ObjC";

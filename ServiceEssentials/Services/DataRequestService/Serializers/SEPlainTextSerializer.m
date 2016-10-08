@@ -8,8 +8,8 @@
 //  Distributed under BSD license. See LICENSE for details.
 //
 
-#import "SEPlainTextSerializer.h"
-#import "SEDataRequestService.h"
+#import <ServiceEssentials/SEPlainTextSerializer.h>
+#import <ServiceEssentials/SEDataRequestService.h>
 
 @implementation SEPlainTextSerializer
 
