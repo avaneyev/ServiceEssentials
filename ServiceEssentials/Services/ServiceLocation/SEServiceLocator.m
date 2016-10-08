@@ -8,11 +8,11 @@
 //  Distributed under BSD license. See LICENSE for details.
 //
 
-#import "SEServiceLocator.h"
+#import <ServiceEssentials/SEServiceLocator.h>
 
 #import <pthread.h>
-#import "SETools.h"
-#import "SEServiceWeakProxy.h"
+#import <ServiceEssentials/SETools.h>
+#import <ServiceEssentials/SEServiceWeakProxy.h>
 
 @interface SEServiceContainer : NSObject
 - (instancetype) initWithObject: (id) object;

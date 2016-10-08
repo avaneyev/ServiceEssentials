@@ -8,8 +8,8 @@
 //  Distributed under BSD license. See LICENSE for details.
 //
 
-#import "SEJSONDataSerializer.h"
-#import "SEDataRequestService.h"
+#import <ServiceEssentials/SEJSONDataSerializer.h>
+#import <ServiceEssentials/SEDataRequestService.h>
 
 static NSData *_SerializeJSON(id object, NSError *__autoreleasing *error)
 {

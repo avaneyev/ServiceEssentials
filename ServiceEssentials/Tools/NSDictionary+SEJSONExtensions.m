@@ -8,8 +8,8 @@
 //  Distributed under BSD license. See LICENSE for details.
 //
 
-#import "NSDictionary+SEJSONExtensions.h"
-#import "NSArray+SEJSONExtensions.h"
+#import <ServiceEssentials/NSDictionary+SEJSONExtensions.h>
+#import <ServiceEssentials/NSArray+SEJSONExtensions.h>
 
 @implementation NSDictionary (SEJSONExtensions)
 

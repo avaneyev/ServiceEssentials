@@ -8,17 +8,17 @@
 //  Distributed under BSD license. See LICENSE for details.
 //
 
-#import "SEDataRequestFactory.h"
+#import <ServiceEssentials/SEDataRequestFactory.h>
 
 #include <pthread.h>
 
-#import "SEDataRequestServicePrivate.h"
-#import "SEDataSerializer.h"
-#import "SEJSONDataSerializer.h"
-#import "SEInternalDataRequestBuilder.h"
-#import "SEMultipartRequestContentStream.h"
-#import "SETools.h"
-#import "SEWebFormSerializer.h"
+#import <ServiceEssentials/SEDataRequestServicePrivate.h>
+#import <ServiceEssentials/SEDataSerializer.h>
+#import <ServiceEssentials/SEJSONDataSerializer.h>
+#import <ServiceEssentials/SEInternalDataRequestBuilder.h>
+#import <ServiceEssentials/SEMultipartRequestContentStream.h>
+#import <ServiceEssentials/SETools.h>
+#import <ServiceEssentials/SEWebFormSerializer.h>
 
 #define CHECK_IF_SECURE do { if (!_isSecure) THROW_NOT_IMPLEMENTED((@{ NSLocalizedDescriptionKey: [NSString stringWithFormat:@"%@ is not implemented for non-secure request factory", NSStringFromSelector(_cmd)] })); } while(0)
 

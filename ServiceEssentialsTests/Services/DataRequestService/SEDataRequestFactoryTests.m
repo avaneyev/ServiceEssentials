@@ -11,6 +11,7 @@
 #import <XCTest/XCTest.h>
 #import <OCMock/OCMock.h>
 #import "SEDataRequestFactory.h"
+#import "SEInternalDataRequestBuilder.h"
 
 @interface SEDataRequestFactoryTests : XCTestCase
 
@@ -43,12 +44,19 @@
     _preparationDelegateMock = nil;
 }
 
-- (void)testRequestFactoryThrowsOnUnsafeFactoryCreatingSimpleRequest
+- (void)testRequestFactoryThrowsOnUnsafeFactoryCreatingRequestsRequiringSecure
 {
     SEDataRequestFactory *factory = [[SEDataRequestFactory alloc] initWithService:_serviceMock secure:YES userAgent:_userAgentString requestPreparationDelegate:_preparationDelegateMock];
     
     NSError *error = nil;
     XCTAssertThrows([factory createRequestWithMethod:@"GET" baseURL:_baseURL path:@"my_path/method" body:nil mimeType:nil error:&error]);
+
+    XCTAssertThrows([factory createDownloadRequestWithBaseURL:_baseURL path:@"path" body:nil error:&error]);
+
+    SEInternalDataRequestBuilder *builder = [[SEInternalDataRequestBuilder alloc] initWithDataRequestService:_serviceMock];
+    XCTAssertThrows([factory createRequestWithBuilder:builder baseURL:_baseURL error:&error]);
+
+    XCTAssertThrows([factory createMultipartRequestWithBuilder:builder baseURL:_baseURL boundary:@"boundary" error:&error]);
 }
 
 @end

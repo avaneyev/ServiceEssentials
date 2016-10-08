@@ -9,7 +9,7 @@
 //
 
 #import <Foundation/Foundation.h>
-#import "SEDataSerializer.h"
+#import <ServiceEssentials/SEDataSerializer.h>
 
 @interface SEPlainTextSerializer : SEDataSerializer
 

@@ -33,9 +33,9 @@
 // -----------------------------------------------------------------------------
 
 
-#import "SEDataRequestServiceSecurityHelper.h"
+#import <ServiceEssentials/SEDataRequestServiceSecurityHelper.h>
 
-#import "SEDataRequestService.h"
+#import <ServiceEssentials/SEDataRequestService.h>
 
 // Declarations for some helper functions
 #if !defined(__IPHONE_OS_VERSION_MIN_REQUIRED)

@@ -13,9 +13,9 @@
 #include <libkern/OSAtomic.h>
 #import <CoreData/CoreData.h>
 
-#import "SETools.h"
-#import "SEConstants.h"
-#import "NSArray+SEJSONExtensions.h"
+#import <ServiceEssentials/SETools.h>
+#import <ServiceEssentials/SEConstants.h>
+#import <ServiceEssentials/NSArray+SEJSONExtensions.h>
 
 NSString * _Nonnull const SEPersistenceServiceInitializationCompleteNotification = @"SEPersistenceServiceInitializationCompleteNotification";
 NSString * _Nonnull const SEPersistenceServiceInitializationSucceededKey = @"SEPersistenceServiceInitializationSucceededKey";

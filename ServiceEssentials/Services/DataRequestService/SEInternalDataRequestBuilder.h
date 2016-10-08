@@ -8,8 +8,8 @@
 //  Distributed under BSD license. See LICENSE for details.
 //
 
-#import "SEDataRequestService.h"
-#import "SEDataRequestServicePrivate.h"
+#import <ServiceEssentials/SEDataRequestService.h>
+#import <ServiceEssentials/SEDataRequestServicePrivate.h>
 
 @class SEMultipartRequestContentPart;
 

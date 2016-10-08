@@ -8,11 +8,11 @@
 //  Distributed under BSD license. See LICENSE for details.
 //
 
-#import "SEDataSerializer.h"
+#import <ServiceEssentials/SEDataSerializer.h>
 
 @import MobileCoreServices;
 
-#import "SEDataRequestService.h"
+#import <ServiceEssentials/SEDataRequestService.h>
 
 @implementation SEDataSerializer
 

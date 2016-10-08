@@ -8,7 +8,7 @@
 //  Distributed under BSD license. See LICENSE for details.
 //
 
-#import "SEDataRequestService.h"
+#import <ServiceEssentials/SEDataRequestService.h>
 
 @protocol SEEnvironmentService;
 @class SEDataSerializer;

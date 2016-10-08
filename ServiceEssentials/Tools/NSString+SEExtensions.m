@@ -8,7 +8,7 @@
 //  Distributed under BSD license. See LICENSE for details.
 //
 
-#import "NSString+SEExtensions.h"
+#import <ServiceEssentials/NSString+SEExtensions.h>
 
 @implementation NSString(SEExtentsions)
 

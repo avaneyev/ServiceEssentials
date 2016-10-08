@@ -8,8 +8,8 @@
 //  Distributed under BSD license. See LICENSE for details.
 //
 
-#import "SEServiceWeakProxy.h"
-#import "SETools.h"
+#import <ServiceEssentials/SEServiceWeakProxy.h>
+#import <ServiceEssentials/SETools.h>
 #include <objc/runtime.h>
 
 @implementation SEServiceWeakProxy

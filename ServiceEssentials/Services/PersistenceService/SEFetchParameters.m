@@ -8,7 +8,7 @@
 //  Distributed under BSD license. See LICENSE for details.
 //
 
-#import "SEFetchParameters.h"
+#import <ServiceEssentials/SEFetchParameters.h>
 
 @implementation SEFetchParameters
 
