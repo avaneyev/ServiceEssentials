@@ -9,7 +9,7 @@
 //
 
 #import <ServiceEssentials/SEDataRequestService.h>
-#import <ServiceEssentials/SEDataRequestServicePrivate.h>
+#import "SEDataRequestServicePrivate.h"
 
 @class SEMultipartRequestContentPart;
 

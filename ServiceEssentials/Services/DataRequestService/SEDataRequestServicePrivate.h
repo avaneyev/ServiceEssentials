@@ -21,8 +21,8 @@ typedef enum {
 #include <objc/runtime.h>
 
 #import <ServiceEssentials/SEDataRequestServiceImpl.h>
-#import <ServiceEssentials/SETools.h>
 #import <ServiceEssentials/SEWebFormSerializer.h>
+#import "SETools.h"
 
 extern NSString * _Nonnull const SEDataRequestMethodGET;
 extern NSString * _Nonnull const SEDataRequestMethodPOST;
