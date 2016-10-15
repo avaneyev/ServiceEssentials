@@ -12,6 +12,7 @@
 #import <OCMock/OCMock.h>
 #import "SEDataRequestFactory.h"
 #import "SEInternalDataRequestBuilder.h"
+#import <ServiceEssentials/SEJSONDataSerializer.h>
 
 static NSString *const MethodGET = @"GET";
 static NSString *const MethodPOST = @"POST";
@@ -84,19 +85,65 @@ static NSString *const MethodHEAD = @"HEAD";
     [self veriyAllMocks];
 }
 
-- (void)testRequestFactoryCreateRequestWithoutBodyNoDelegate
+- (void)_testRequestFactoryCreateRequestWithoutBodyNoDelegateWithMethod:(NSString *)method
 {
     NSString *const path = @"some-path";
     SEDataRequestFactory *factory = [[SEDataRequestFactory alloc] initWithService:_serviceMock secure:YES userAgent:_userAgentString requestPreparationDelegate:nil];
 
     NSError *error = nil;
-    NSURLRequest *request = [factory createRequestWithMethod:MethodGET baseURL:_baseURL path:path body:nil mimeType:nil error:&error];
+    NSURLRequest *request = [factory createRequestWithMethod:method baseURL:_baseURL path:path body:nil mimeType:nil error:&error];
 
     XCTAssertNil(error);
     XCTAssertNotNil(request);
 
     XCTAssertEqualObjects(request.URL, [NSURL URLWithString:path relativeToURL:_baseURL]);
-    XCTAssertEqualObjects(request.HTTPMethod, MethodGET);
+    XCTAssertEqualObjects(request.HTTPMethod, method);
+    XCTAssertNil(request.HTTPBody);
+
+    NSDictionary<NSString *, NSString *> *expectedHeaders = @{
+                                                              @"User-Agent" : _userAgentString,
+                                                              @"Accept" : @"application/json; charset=utf-8"
+                                                              };
+    XCTAssertEqualObjects(request.allHTTPHeaderFields, expectedHeaders);
+
+    [self veriyAllMocks];
+}
+
+- (void)testRequestFactoryCreateGETRequestWithoutBodyNoDelegate
+{
+    [self _testRequestFactoryCreateRequestWithoutBodyNoDelegateWithMethod:MethodGET];
+}
+
+- (void)testRequestFactoryCreatePOSTRequestWithoutBodyNoDelegate
+{
+    [self _testRequestFactoryCreateRequestWithoutBodyNoDelegateWithMethod:MethodPOST];
+}
+
+- (void)testRequestFactoryCreatePUTRequestWithoutBodyNoDelegate
+{
+    [self _testRequestFactoryCreateRequestWithoutBodyNoDelegateWithMethod:MethodPUT];
+}
+
+- (void)testRequestFactoryCreateHEADRequestWithoutBodyNoDelegate
+{
+    [self _testRequestFactoryCreateRequestWithoutBodyNoDelegateWithMethod:MethodHEAD];
+}
+
+- (void)_testRequestFactoryCreateRequestConvertsBodyToURLQueryWithMethod:(NSString *)method
+{
+    NSString *const path = @"other-path";
+    NSDictionary *const parameters = @{ @"first" : @"value", @"second" : @2 };
+    SEDataRequestFactory *factory = [[SEDataRequestFactory alloc] initWithService:_serviceMock secure:YES userAgent:_userAgentString requestPreparationDelegate:nil];
+
+    NSError *error = nil;
+    NSURLRequest *request = [factory createRequestWithMethod:method baseURL:_baseURL path:path body:parameters mimeType:nil error:&error];
+
+    XCTAssertNil(error);
+    XCTAssertNotNil(request);
+
+    NSURL *expectedURL = [NSURL URLWithString:@"other-path?first=value&second=2" relativeToURL:_baseURL];
+    XCTAssertEqualObjects(request.URL, expectedURL);
+    XCTAssertEqualObjects(request.HTTPMethod, method);
     XCTAssertNil(request.HTTPBody);
 
     NSDictionary<NSString *, NSString *> *expectedHeaders = @{
@@ -110,28 +157,49 @@ static NSString *const MethodHEAD = @"HEAD";
 
 - (void)testRequestFactoryCreateGETRequestConvertsBodyToURLQuery
 {
-    NSString *const path = @"other-path";
+    [self _testRequestFactoryCreateRequestConvertsBodyToURLQueryWithMethod:MethodGET];
+}
+
+- (void)testRequestFactoryCreateHEADRequestConvertsBodyToURLQuery
+{
+    [self _testRequestFactoryCreateRequestConvertsBodyToURLQueryWithMethod:MethodHEAD];
+}
+
+- (void)_testRequestFactoryCreateRequestSerializesBodyDefaultMimeTypeWithMethod:(NSString *)method
+{
+    NSString *const path = @"different/path";
     NSDictionary *const parameters = @{ @"first" : @"value", @"second" : @2 };
     SEDataRequestFactory *factory = [[SEDataRequestFactory alloc] initWithService:_serviceMock secure:YES userAgent:_userAgentString requestPreparationDelegate:nil];
 
     NSError *error = nil;
-    NSURLRequest *request = [factory createRequestWithMethod:MethodGET baseURL:_baseURL path:path body:parameters mimeType:nil error:&error];
+    NSURLRequest *request = [factory createRequestWithMethod:method baseURL:_baseURL path:path body:parameters mimeType:nil error:&error];
 
     XCTAssertNil(error);
     XCTAssertNotNil(request);
 
-    NSURL *expectedURL = [NSURL URLWithString:@"other-path?first=value&second=2" relativeToURL:_baseURL];
+    NSURL *expectedURL = [NSURL URLWithString:@"different/path" relativeToURL:_baseURL];
     XCTAssertEqualObjects(request.URL, expectedURL);
-    XCTAssertEqualObjects(request.HTTPMethod, MethodGET);
-    XCTAssertNil(request.HTTPBody);
+    XCTAssertEqualObjects(request.HTTPMethod, method);
+    XCTAssertEqualObjects(request.HTTPBody, [SEJSONDataSerializer serializeObject:parameters error:nil]);
 
     NSDictionary<NSString *, NSString *> *expectedHeaders = @{
                                                               @"User-Agent" : _userAgentString,
-                                                              @"Accept" : @"application/json; charset=utf-8"
+                                                              @"Accept" : @"application/json; charset=utf-8",
+                                                              @"Content-Type" : @"application/json; charset=utf-8"
                                                               };
     XCTAssertEqualObjects(request.allHTTPHeaderFields, expectedHeaders);
 
     [self veriyAllMocks];
+}
+
+- (void)testRequestFactoryCreatePOSTRequestSerializesBodyDefaultMimeType
+{
+    [self _testRequestFactoryCreateRequestSerializesBodyDefaultMimeTypeWithMethod:MethodPOST];
+}
+
+- (void)testRequestFactoryCreatePUTRequestSerializesBodyDefaultMimeType
+{
+    [self _testRequestFactoryCreateRequestSerializesBodyDefaultMimeTypeWithMethod:MethodPUT];
 }
 
 - (void)testRequestFactoryCreateUnsafeRequestWithoutBody
