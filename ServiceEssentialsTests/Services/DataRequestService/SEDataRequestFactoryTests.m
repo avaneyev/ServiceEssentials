@@ -202,7 +202,7 @@ static NSString *const MethodHEAD = @"HEAD";
     [self _testRequestFactoryCreateRequestSerializesBodyDefaultMimeTypeWithMethod:MethodPUT];
 }
 
-- (void)_testRequestFactoryCreateRequestSerializesBodyExplicitMimeTypeWithMethod:(NSString *)method
+- (void)_testRequestFactoryCreateRequestSerializesBodyExplicitMimeTypeWithMethod:(NSString *)method appendsCharset:(BOOL)appendsCharset
 {
     NSString *const path = @"explicit/path";
     NSString *const mimeType = @"unit/test";
@@ -211,6 +211,8 @@ static NSString *const MethodHEAD = @"HEAD";
     
     OCMockObject *serializerMock = [OCMockObject mockForClass:[SEDataSerializer class]];
     [[[_serviceMock stub] andReturn:serializerMock] explicitSerializerForMIMEType:mimeType];
+    
+    [[[serializerMock stub] andReturnValue:@(appendsCharset)] shouldAppendCharsetToContentType];
     [[[serializerMock expect] andReturn:mockData] serializeObject:parameters mimeType:mimeType error:[OCMArg anyObjectRef]];
     
     SEDataRequestFactory *factory = [[SEDataRequestFactory alloc] initWithService:_serviceMock secure:YES userAgent:_userAgentString requestPreparationDelegate:nil];
@@ -226,10 +228,11 @@ static NSString *const MethodHEAD = @"HEAD";
     XCTAssertEqualObjects(request.HTTPMethod, method);
     XCTAssertEqualObjects(request.HTTPBody, mockData);
     
+    NSString *expectedContentType = appendsCharset ? @"unit/test; charset=utf-8" : mimeType;
     NSDictionary<NSString *, NSString *> *expectedHeaders = @{
                                                               @"User-Agent" : _userAgentString,
                                                               @"Accept" : @"application/json; charset=utf-8",
-                                                              @"Content-Type" : @"unit/test; charset=utf-8"
+                                                              @"Content-Type" : expectedContentType
                                                               };
     XCTAssertEqualObjects(request.allHTTPHeaderFields, expectedHeaders);
     
@@ -239,12 +242,17 @@ static NSString *const MethodHEAD = @"HEAD";
 
 - (void)testRequestFactoryCreatePOSTRequestSerializesBodyExplicitMimeType
 {
-    [self _testRequestFactoryCreateRequestSerializesBodyExplicitMimeTypeWithMethod:MethodPOST];
+    [self _testRequestFactoryCreateRequestSerializesBodyExplicitMimeTypeWithMethod:MethodPOST appendsCharset:YES];
 }
 
 - (void)testRequestFactoryCreatePUTRequestSerializesBodyExplicitMimeType
 {
-    [self _testRequestFactoryCreateRequestSerializesBodyExplicitMimeTypeWithMethod:MethodPUT];
+    [self _testRequestFactoryCreateRequestSerializesBodyExplicitMimeTypeWithMethod:MethodPUT appendsCharset:YES];
+}
+
+- (void)testRequestFactoryCreatePOSTRequestSerializesBodyExplicitMimeTypeSerializerDoesNotAppendCharset
+{
+    [self _testRequestFactoryCreateRequestSerializesBodyExplicitMimeTypeWithMethod:MethodPOST appendsCharset:NO];
 }
 
 - (void)testRequestFactoryCreateUnsafeRequestWithoutBody

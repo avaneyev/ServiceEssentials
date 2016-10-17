@@ -21,6 +21,11 @@
     return NO;
 }
 
+- (BOOL)shouldAppendCharsetToContentType
+{
+    return NO;
+}
+
 - (NSData *)serializeObject:(id)object mimeType:(NSString *)mimeType error:(NSError *__autoreleasing *)error
 {
     if ([object isKindOfClass:[NSData class]])

@@ -33,6 +33,11 @@
     return [string dataUsingEncoding:encoding];
 }
 
+- (BOOL)shouldAppendCharsetToContentType
+{
+    return YES;
+}
+
 - (id)deserializeData:(NSData *)data mimeType:(NSString *)mimeType error:(NSError *__autoreleasing *)error
 {
     NSStringEncoding encoding = [SEDataSerializer charsetFromMIMEType:mimeType];

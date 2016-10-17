@@ -47,6 +47,11 @@ static inline void AppendQueryComponent(NSMutableString *mutableString, NSString
     return YES;
 }
 
+- (BOOL)shouldAppendCharsetToContentType
+{
+    return YES;
+}
+
 - (NSData *)serializeObject:(id)object mimeType:(NSString *)mimeType error:(NSError *__autoreleasing *)error
 {
     if (![object isKindOfClass:[NSDictionary class]])

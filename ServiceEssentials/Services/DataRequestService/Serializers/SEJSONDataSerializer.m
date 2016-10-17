@@ -41,6 +41,11 @@ static NSData *_SerializeJSON(id object, NSError *__autoreleasing *error)
     return YES;
 }
 
+- (BOOL)shouldAppendCharsetToContentType
+{
+    return YES;
+}
+
 - (NSData *)serializeObject:(id)object mimeType:(NSString *)mimeType error:(NSError *__autoreleasing *)error
 {
     return _SerializeJSON(object, error);

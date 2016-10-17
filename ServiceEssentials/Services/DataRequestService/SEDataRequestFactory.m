@@ -422,7 +422,7 @@ static inline BOOL SEDataRequestMethodURLEncodesBody(NSString *method)
         {
             return SEDataRequestAssignSerializationError(serializationError, error);
         }
-        contentType = [NSString stringWithFormat:@"%@; charset=%@", mimeType, charset];
+        contentType = serializer.shouldAppendCharsetToContentType ? [NSString stringWithFormat:@"%@; charset=%@", mimeType, charset] : mimeType;
     }
     else if ([body isKindOfClass:[NSString class]])
     {

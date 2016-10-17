@@ -19,6 +19,11 @@
  */
 @property (nonatomic, readonly) BOOL supportsAdditionalParameters;
 
+/**
+ Determines if `Content-Type` header should contain charset when using this serializer
+ */
+@property (nonatomic, readonly) BOOL shouldAppendCharsetToContentType;
+
 /** Serialize the object to data
  @param object object to be serialized
  @param mimeType data type hint, seializers could use it to extract charset and other encoding parameters
