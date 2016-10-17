@@ -255,6 +255,82 @@ static NSString *const MethodHEAD = @"HEAD";
     [self _testRequestFactoryCreateRequestSerializesBodyExplicitMimeTypeWithMethod:MethodPOST appendsCharset:NO];
 }
 
+- (void)testRequestFactoryCreatePOSTRequestRawDataExplicitMIMETypeAllowed
+{
+    NSString *const path = @"explicit/path";
+    NSString *const mimeType = @"unit/test";
+    NSData *mockData = [@"some data" dataUsingEncoding:NSUTF8StringEncoding];
+    
+    [[[_serviceMock stub] andReturn:nil] explicitSerializerForMIMEType:mimeType];
+    
+    SEDataRequestFactory *factory = [[SEDataRequestFactory alloc] initWithService:_serviceMock secure:YES userAgent:_userAgentString requestPreparationDelegate:nil];
+    
+    NSError *error = nil;
+    NSURLRequest *request = [factory createRequestWithMethod:MethodPOST baseURL:_baseURL path:path body:mockData mimeType:mimeType error:&error];
+    
+    XCTAssertNil(error);
+    XCTAssertNotNil(request);
+    
+    NSURL *expectedURL = [NSURL URLWithString:path relativeToURL:_baseURL];
+    XCTAssertEqualObjects(request.URL, expectedURL);
+    XCTAssertEqualObjects(request.HTTPMethod, MethodPOST);
+    XCTAssertEqualObjects(request.HTTPBody, mockData);
+    
+    NSDictionary<NSString *, NSString *> *expectedHeaders = @{
+                                                              @"User-Agent" : _userAgentString,
+                                                              @"Accept" : @"application/json; charset=utf-8",
+                                                              @"Content-Type" : mimeType
+                                                              };
+    XCTAssertEqualObjects(request.allHTTPHeaderFields, expectedHeaders);
+    
+    [self veriyAllMocks];
+}
+
+- (void)testRequestFactoryCreatePOSTRequestRawDataWithoutMIMETypeSentAsOctetStream
+{
+    NSString *const path = @"explicit/path";
+    NSData *mockData = [@"some data" dataUsingEncoding:NSUTF8StringEncoding];
+    
+    SEDataRequestFactory *factory = [[SEDataRequestFactory alloc] initWithService:_serviceMock secure:YES userAgent:_userAgentString requestPreparationDelegate:nil];
+    
+    NSError *error = nil;
+    NSURLRequest *request = [factory createRequestWithMethod:MethodPOST baseURL:_baseURL path:path body:mockData mimeType:nil error:&error];
+    
+    XCTAssertNil(error);
+    XCTAssertNotNil(request);
+    
+    NSURL *expectedURL = [NSURL URLWithString:path relativeToURL:_baseURL];
+    XCTAssertEqualObjects(request.URL, expectedURL);
+    XCTAssertEqualObjects(request.HTTPMethod, MethodPOST);
+    XCTAssertEqualObjects(request.HTTPBody, mockData);
+    
+    NSDictionary<NSString *, NSString *> *expectedHeaders = @{
+                                                              @"User-Agent" : _userAgentString,
+                                                              @"Accept" : @"application/json; charset=utf-8",
+                                                              @"Content-Type" : SEDataRequestServiceContentTypeOctetStream
+                                                              };
+    XCTAssertEqualObjects(request.allHTTPHeaderFields, expectedHeaders);
+    
+    [self veriyAllMocks];
+}
+
+- (void)testRequestFactoryCreatePOSTRequestUnrecognizedDataTypeProducesError
+{
+    NSString *const path = @"explicit/path";
+    NSURL *unrecognizedData = [NSURL URLWithString:@"https://www.github.com"];
+    XCTAssertNotNil(unrecognizedData);
+    
+    SEDataRequestFactory *factory = [[SEDataRequestFactory alloc] initWithService:_serviceMock secure:YES userAgent:_userAgentString requestPreparationDelegate:nil];
+    
+    NSError *error = nil;
+    NSURLRequest *request = [factory createRequestWithMethod:MethodPOST baseURL:_baseURL path:path body:unrecognizedData mimeType:nil error:&error];
+    
+    XCTAssertNil(request);
+    XCTAssertNotNil(error);
+
+    [self veriyAllMocks];
+}
+
 - (void)testRequestFactoryCreateUnsafeRequestWithoutBody
 {
     NSURL *url = [_baseURL URLByAppendingPathComponent:@"some-other-path"];
