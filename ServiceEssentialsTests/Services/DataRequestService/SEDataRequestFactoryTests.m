@@ -58,6 +58,8 @@ static NSString *const MethodHEAD = @"HEAD";
     [_preparationDelegateMock verify];
 }
 
+#pragma mark - Safety Checks
+
 - (void)testRequestFactoryThrowsOnUnsafeFactoryCreatingRequestsRequiringSecure
 {
     SEDataRequestFactory *factory = [[SEDataRequestFactory alloc] initWithService:_serviceMock secure:NO userAgent:_userAgentString requestPreparationDelegate:nil];
@@ -84,6 +86,8 @@ static NSString *const MethodHEAD = @"HEAD";
 
     [self veriyAllMocks];
 }
+
+#pragma mark - Simple request factory
 
 - (void)_testRequestFactoryCreateRequestWithoutBodyNoDelegateWithMethod:(NSString *)method
 {
@@ -286,6 +290,46 @@ static NSString *const MethodHEAD = @"HEAD";
     [self veriyAllMocks];
 }
 
+- (void)testRequestFactoryCreatePOSTRequestRawDataExplicitMIMETypeHasSerializerForIt
+{
+    NSString *const path = @"explicit/path";
+    NSString *const mimeType = @"unit/test";
+    NSData *mockData = [@"some data" dataUsingEncoding:NSUTF8StringEncoding];
+    NSData *returnedData = [@"some other data" dataUsingEncoding:NSUTF8StringEncoding];
+    
+    XCTAssertNotEqualObjects(mockData, returnedData);
+    
+    OCMockObject *serializerMock = [OCMockObject mockForClass:[SEDataSerializer class]];
+    [[[_serviceMock stub] andReturn:serializerMock] explicitSerializerForMIMEType:mimeType];
+    
+    [[[serializerMock stub] andReturnValue:@(NO)] shouldAppendCharsetToContentType];
+    [[[serializerMock expect] andReturn:returnedData] serializeObject:mockData mimeType:mimeType error:[OCMArg anyObjectRef]];
+
+    [[[_serviceMock stub] andReturn:serializerMock] explicitSerializerForMIMEType:mimeType];
+    
+    SEDataRequestFactory *factory = [[SEDataRequestFactory alloc] initWithService:_serviceMock secure:YES userAgent:_userAgentString requestPreparationDelegate:nil];
+    
+    NSError *error = nil;
+    NSURLRequest *request = [factory createRequestWithMethod:MethodPOST baseURL:_baseURL path:path body:mockData mimeType:mimeType error:&error];
+    
+    XCTAssertNil(error);
+    XCTAssertNotNil(request);
+    
+    NSURL *expectedURL = [NSURL URLWithString:path relativeToURL:_baseURL];
+    XCTAssertEqualObjects(request.URL, expectedURL);
+    XCTAssertEqualObjects(request.HTTPMethod, MethodPOST);
+    XCTAssertEqualObjects(request.HTTPBody, returnedData);
+    
+    NSDictionary<NSString *, NSString *> *expectedHeaders = @{
+                                                              @"User-Agent" : _userAgentString,
+                                                              @"Accept" : @"application/json; charset=utf-8",
+                                                              @"Content-Type" : mimeType
+                                                              };
+    XCTAssertEqualObjects(request.allHTTPHeaderFields, expectedHeaders);
+    
+    [self veriyAllMocks];
+}
+
 - (void)testRequestFactoryCreatePOSTRequestRawDataWithoutMIMETypeSentAsOctetStream
 {
     NSString *const path = @"explicit/path";
@@ -353,6 +397,11 @@ static NSString *const MethodHEAD = @"HEAD";
 
     [self veriyAllMocks];
 }
+
+#pragma mark - Request builder - non-multipart
+
+
+#pragma mark - Request builder - multipart
 
 
 @end
