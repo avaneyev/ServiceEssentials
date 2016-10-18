@@ -87,6 +87,12 @@ static NSString *const MethodHEAD = @"HEAD";
     [self veriyAllMocks];
 }
 
+- (void)testRequestFactoryThrowsOnUnsafeFactoryRequiringNoDelegate
+{
+    XCTAssertThrows([[SEDataRequestFactory alloc] initWithService:_serviceMock secure:NO userAgent:_userAgentString requestPreparationDelegate:_preparationDelegateMock]);
+    [self veriyAllMocks];
+}
+
 #pragma mark - Simple request factory
 
 - (void)_testRequestFactoryCreateRequestWithoutBodyNoDelegateWithMethod:(NSString *)method
@@ -375,6 +381,141 @@ static NSString *const MethodHEAD = @"HEAD";
     [self veriyAllMocks];
 }
 
+- (void)testRequestFactoryWithDelegateCreateGETRequestIncludesParameters
+{
+    NSString *const path = @"yet/another/path";
+    NSDictionary *const requestParameters = @{ @"request" : @"request-value" };
+    NSDictionary *const delegateParameters = @{ @"additional" : @"some-value" };
+
+    SEDataRequestFactory *factory = [[SEDataRequestFactory alloc] initWithService:_serviceMock secure:YES userAgent:_userAgentString requestPreparationDelegate:_preparationDelegateMock];
+
+    [[[_preparationDelegateMock expect] andReturn:delegateParameters] dataRequestService:(id)_serviceMock additionalParametersForRequestMethod:MethodGET path:path];
+    [[[_preparationDelegateMock expect] andReturn:nil] dataRequestService:(id)_serviceMock additionalHeadersForRequestMethod:MethodGET path:path];
+
+    NSError *error = nil;
+    NSURLRequest *request = [factory createRequestWithMethod:MethodGET baseURL:_baseURL path:path body:requestParameters mimeType:nil error:&error];
+
+    XCTAssertNil(error);
+    XCTAssertNotNil(request);
+
+    NSURL *expectedURL = [NSURL URLWithString:[NSString stringWithFormat:@"%@?additional=some-value&request=request-value", path] relativeToURL:_baseURL];
+    XCTAssertEqualObjects(request.URL, expectedURL);
+    XCTAssertEqualObjects(request.HTTPMethod, MethodGET);
+    XCTAssertNil(request.HTTPBody);
+
+    NSDictionary<NSString *, NSString *> *expectedHeaders = @{
+                                                              @"User-Agent" : _userAgentString,
+                                                              @"Accept" : @"application/json; charset=utf-8",
+                                                              };
+    XCTAssertEqualObjects(request.allHTTPHeaderFields, expectedHeaders);
+
+    [self veriyAllMocks];
+}
+
+- (void)testRequestFactoryWithDelegateCreateGETRequestIncludesParametersAndHeaders
+{
+    NSString *const path = @"yet/another/path";
+    NSDictionary *const requestParameters = @{ @"request" : @"request-value" };
+    NSDictionary *const delegateParameters = @{ @"additional" : @"some-value" };
+    NSDictionary *const delegateHeaders = @{ @"X-Super-Header" : @"my awesome value" };
+
+    SEDataRequestFactory *factory = [[SEDataRequestFactory alloc] initWithService:_serviceMock secure:YES userAgent:_userAgentString requestPreparationDelegate:_preparationDelegateMock];
+
+    [[[_preparationDelegateMock expect] andReturn:delegateParameters] dataRequestService:(id)_serviceMock additionalParametersForRequestMethod:MethodGET path:path];
+    [[[_preparationDelegateMock expect] andReturn:delegateHeaders] dataRequestService:(id)_serviceMock additionalHeadersForRequestMethod:MethodGET path:path];
+
+    NSError *error = nil;
+    NSURLRequest *request = [factory createRequestWithMethod:MethodGET baseURL:_baseURL path:path body:requestParameters mimeType:nil error:&error];
+
+    XCTAssertNil(error);
+    XCTAssertNotNil(request);
+
+    NSURL *expectedURL = [NSURL URLWithString:[NSString stringWithFormat:@"%@?additional=some-value&request=request-value", path] relativeToURL:_baseURL];
+    XCTAssertEqualObjects(request.URL, expectedURL);
+    XCTAssertEqualObjects(request.HTTPMethod, MethodGET);
+    XCTAssertNil(request.HTTPBody);
+
+    NSDictionary<NSString *, NSString *> *expectedHeaders = @{
+                                                              @"User-Agent" : _userAgentString,
+                                                              @"Accept" : @"application/json; charset=utf-8",
+                                                              @"X-Super-Header": @"my awesome value"
+                                                              };
+    XCTAssertEqualObjects(request.allHTTPHeaderFields, expectedHeaders);
+
+    [self veriyAllMocks];
+}
+
+- (void)testRequestFactoryWithDelegateCreateGETRequestIncludesParametersAndHeadersThrowOnCollisions
+{
+    NSString *const path = @"yet/another/path";
+    NSDictionary *const requestParameters = @{ @"request" : @"request-value" };
+    NSDictionary *const delegateParameters = @{
+                                               @"additional" : @"some-value",
+                                               @"request" : @"super-value"
+                                               };
+    NSDictionary *const delegateHeaders = @{
+                                            @"X-Super-Header" : @"my awesome value",
+                                            @"Accept" : @"I accept whatever"
+                                            };
+
+    SEDataRequestFactory *factory = [[SEDataRequestFactory alloc] initWithService:_serviceMock secure:YES userAgent:_userAgentString requestPreparationDelegate:_preparationDelegateMock];
+
+    [[[_preparationDelegateMock expect] andReturn:delegateParameters] dataRequestService:(id)_serviceMock additionalParametersForRequestMethod:MethodGET path:path];
+    [[[_preparationDelegateMock expect] andReturn:delegateHeaders] dataRequestService:(id)_serviceMock additionalHeadersForRequestMethod:MethodGET path:path];
+
+    NSError *error = nil;
+    XCTAssertThrows([factory createRequestWithMethod:MethodGET baseURL:_baseURL path:path body:requestParameters mimeType:nil error:&error]);
+
+    [self veriyAllMocks];
+}
+
+- (void)testRequestFactoryWithDelegateCreatePOSTRequestIncludesParametersIfSerializerAllows
+{
+    NSString *const path = @"yet/another/path";
+    NSString *const mimeType = @"unit/test";
+    NSDictionary *const requestParameters = @{ @"request" : @"request-value" };
+    NSDictionary *const delegateParameters = @{ @"additional" : @"some-value" };
+    NSDictionary *const delegateHeaders = @{ @"X-Super-Header" : @"my awesome value" };
+    NSData *const serializedData = [@"useful data" dataUsingEncoding:NSUTF8StringEncoding];
+
+    NSMutableDictionary *expectedObjectToSerialize = [[NSMutableDictionary alloc] init];
+    [expectedObjectToSerialize addEntriesFromDictionary:requestParameters];
+    [expectedObjectToSerialize addEntriesFromDictionary:delegateParameters];
+
+    SEDataRequestFactory *factory = [[SEDataRequestFactory alloc] initWithService:_serviceMock secure:YES userAgent:_userAgentString requestPreparationDelegate:_preparationDelegateMock];
+
+    [[[_preparationDelegateMock expect] andReturn:delegateParameters] dataRequestService:(id)_serviceMock additionalParametersForRequestMethod:MethodPOST path:path];
+    [[[_preparationDelegateMock expect] andReturn:delegateHeaders] dataRequestService:(id)_serviceMock additionalHeadersForRequestMethod:MethodPOST path:path];
+
+    OCMockObject *serializerMock = [OCMockObject mockForClass:[SEDataSerializer class]];
+    [[[_serviceMock stub] andReturn:serializerMock] explicitSerializerForMIMEType:mimeType];
+
+    [[[serializerMock stub] andReturnValue:@NO] shouldAppendCharsetToContentType];
+    [[[serializerMock stub] andReturnValue:@YES] supportsAdditionalParameters];
+    [[[serializerMock expect] andReturn:serializedData] serializeObject:expectedObjectToSerialize mimeType:mimeType error:[OCMArg anyObjectRef]];
+
+    NSError *error = nil;
+    NSURLRequest *request = [factory createRequestWithMethod:MethodPOST baseURL:_baseURL path:path body:requestParameters mimeType:mimeType error:&error];
+
+    XCTAssertNil(error);
+    XCTAssertNotNil(request);
+
+    NSURL *expectedURL = [NSURL URLWithString:path relativeToURL:_baseURL];
+    XCTAssertEqualObjects(request.URL, expectedURL);
+    XCTAssertEqualObjects(request.HTTPMethod, MethodPOST);
+    XCTAssertEqual(request.HTTPBody, serializedData);
+
+    NSDictionary<NSString *, NSString *> *expectedHeaders = @{
+                                                              @"User-Agent" : _userAgentString,
+                                                              @"Accept" : @"application/json; charset=utf-8",
+                                                              @"Content-Type" : mimeType,
+                                                              @"X-Super-Header" : @"my awesome value"
+                                                              };
+    XCTAssertEqualObjects(request.allHTTPHeaderFields, expectedHeaders);
+
+    [self veriyAllMocks];
+}
+
 - (void)testRequestFactoryCreateUnsafeRequestWithoutBody
 {
     NSURL *url = [_baseURL URLByAppendingPathComponent:@"some-other-path"];
@@ -397,6 +538,7 @@ static NSString *const MethodHEAD = @"HEAD";
 
     [self veriyAllMocks];
 }
+
 
 #pragma mark - Request builder - non-multipart
 
