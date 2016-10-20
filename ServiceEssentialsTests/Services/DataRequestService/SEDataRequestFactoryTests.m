@@ -624,7 +624,94 @@ static NSString *const MethodHEAD = @"HEAD";
 }
 
 
+#pragma mark - Download request
+
+- (void)testRequestFactoryCreateDownloadRequestNoDelegate
+{
+    NSString *const path = @"cms/image.png";
+
+    SEDataRequestFactory *factory = [[SEDataRequestFactory alloc] initWithService:_serviceMock secure:YES userAgent:_userAgentString requestPreparationDelegate:nil];
+
+    NSError *error = nil;
+    NSURLRequest *request = [factory createDownloadRequestWithBaseURL:_baseURL path:path body:nil error:&error];
+
+    XCTAssertNil(error);
+    XCTAssertNotNil(request);
+
+    NSURL *expectedURL = [NSURL URLWithString:path relativeToURL:_baseURL];
+    XCTAssertEqualObjects(request.URL, expectedURL);
+    XCTAssertEqualObjects(request.HTTPMethod, MethodGET);
+    XCTAssertNil(request.HTTPBody);
+
+    NSDictionary<NSString *, NSString *> *expectedHeaders = @{
+                                                              @"User-Agent" : _userAgentString,
+                                                              };
+    XCTAssertEqualObjects(request.allHTTPHeaderFields, expectedHeaders);
+
+    [self veriyAllMocks];
+}
+
+- (void)testRequestFactoryCreateDownloadRequestWithDelegate
+{
+    NSString *const path = @"yet/another/path";
+    NSDictionary *const delegateHeaders = @{ @"X-Super-Header" : @"my awesome value" };
+
+    SEDataRequestFactory *factory = [[SEDataRequestFactory alloc] initWithService:_serviceMock secure:YES userAgent:_userAgentString requestPreparationDelegate:_preparationDelegateMock];
+
+    [[[_preparationDelegateMock expect] andReturn:nil] dataRequestService:(id)_serviceMock additionalParametersForRequestMethod:MethodGET path:path];
+    [[[_preparationDelegateMock expect] andReturn:delegateHeaders] dataRequestService:(id)_serviceMock additionalHeadersForRequestMethod:MethodGET path:path];
+
+    NSError *error = nil;
+    NSURLRequest *request = [factory createDownloadRequestWithBaseURL:_baseURL path:path body:nil error:&error];
+
+    XCTAssertNil(error);
+    XCTAssertNotNil(request);
+
+    NSURL *expectedURL = [NSURL URLWithString:path relativeToURL:_baseURL];
+    XCTAssertEqualObjects(request.URL, expectedURL);
+    XCTAssertEqualObjects(request.HTTPMethod, MethodGET);
+    XCTAssertNil(request.HTTPBody);
+
+    NSDictionary<NSString *, NSString *> *expectedHeaders = @{
+                                                              @"User-Agent" : _userAgentString,
+                                                              @"X-Super-Header" : @"my awesome value"
+                                                              };
+    XCTAssertEqualObjects(request.allHTTPHeaderFields, expectedHeaders);
+
+    [self veriyAllMocks];
+}
+
+
 #pragma mark - Request builder - non-multipart
+
+- (void)testRequestFactoryCreateRequestWithBuilderBasicFieldsOnly
+{
+    NSString *const path = @"build/a/path";
+    SEInternalDataRequestBuilder *requestBuilder = [[SEInternalDataRequestBuilder alloc] initWithDataRequestService:_serviceMock];
+    [requestBuilder POST:path
+                 success:^(id o, NSURLResponse *r){ XCTFail(@"Should never invoke"); }
+                 failure:^(NSError * _Nonnull error) { XCTFail(@"Should never invoke"); }
+         completionQueue:dispatch_get_main_queue()];
+
+    SEDataRequestFactory *factory = [[SEDataRequestFactory alloc] initWithService:_serviceMock secure:YES userAgent:_userAgentString requestPreparationDelegate:nil];
+
+    NSError *error = nil;
+    NSURLRequest *request = [factory createRequestWithBuilder:requestBuilder baseURL:_baseURL error:&error];
+
+    XCTAssertNil(error);
+    XCTAssertNotNil(request);
+
+    NSURL *expectedURL = [NSURL URLWithString:path relativeToURL:_baseURL];
+    XCTAssertEqualObjects(request.URL, expectedURL);
+    XCTAssertEqualObjects(request.HTTPMethod, MethodPOST);
+    XCTAssertNil(request.HTTPBody);
+
+    NSDictionary<NSString *, NSString *> *expectedHeaders = @{
+                                                              @"User-Agent" : _userAgentString,
+                                                              @"Accept" : @"application/json; charset=utf-8",
+                                                              };
+    XCTAssertEqualObjects(request.allHTTPHeaderFields, expectedHeaders);
+}
 
 
 #pragma mark - Request builder - multipart
