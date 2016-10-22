@@ -30,6 +30,7 @@
 @property (nonatomic, readonly, strong, nullable) NSDictionary<NSString *, NSString *> *headers;
 @property (nonatomic, readonly, strong, nullable) NSIndexSet *expectedHTTPCodes;
 @property (nonatomic, readonly, strong, nullable) NSDictionary<NSString *, id> *bodyParameters;
+@property (nonatomic, readonly, strong, nullable) NSData *body;
 @property (nonatomic, readonly, strong, nullable) NSArray<SEMultipartRequestContentPart *> *contentParts;
 @property (nonatomic, readonly, strong, nullable) NSNumber *canSendInBackground;
 

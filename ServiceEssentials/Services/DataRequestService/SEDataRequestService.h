@@ -99,8 +99,11 @@ typedef enum
 /** Sets expected HTTP codes (as an index set). Defaults to 2xx. */
 - (void) setExpectedHTTPCodes: (nonnull NSIndexSet *) expectedCodes;
 
-/** Set the request body parameters. Cannot be combined with multipart. */
+/** Set the request body parameters. Cannot be combined with data or multipart. */
 - (void) setBodyParameters: (nonnull NSDictionary<NSString *, id> *) parameters;
+
+/** Set the request body as raw data. Cannot be combined with parameters or multipart. */
+- (void) setBodyData:(nonnull NSData *) data;
 
 /** Request can be sent while application is in the background */
 - (void) setCanSendInBackground:(BOOL)canSendInBackground;

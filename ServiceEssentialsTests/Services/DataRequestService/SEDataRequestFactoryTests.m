@@ -296,20 +296,17 @@ static NSString *const MethodHEAD = @"HEAD";
     [self veriyAllMocks];
 }
 
-- (void)testRequestFactoryCreatePOSTRequestRawDataExplicitMIMETypeHasSerializerForIt
+- (void)testRequestFactoryCreatePOSTRequestRawDataExplicitMIMETypeHasSerializerForItButUsedAsRaw
 {
     NSString *const path = @"explicit/path";
     NSString *const mimeType = @"unit/test";
     NSData *mockData = [@"some data" dataUsingEncoding:NSUTF8StringEncoding];
-    NSData *returnedData = [@"some other data" dataUsingEncoding:NSUTF8StringEncoding];
-    
-    XCTAssertNotEqualObjects(mockData, returnedData);
-    
+
     OCMockObject *serializerMock = [OCMockObject mockForClass:[SEDataSerializer class]];
     [[[_serviceMock stub] andReturn:serializerMock] explicitSerializerForMIMEType:mimeType];
     
     [[[serializerMock stub] andReturnValue:@(NO)] shouldAppendCharsetToContentType];
-    [[[serializerMock expect] andReturn:returnedData] serializeObject:mockData mimeType:mimeType error:[OCMArg anyObjectRef]];
+    [[serializerMock reject]  serializeObject:mockData mimeType:mimeType error:[OCMArg anyObjectRef]];
 
     [[[_serviceMock stub] andReturn:serializerMock] explicitSerializerForMIMEType:mimeType];
     
@@ -324,7 +321,7 @@ static NSString *const MethodHEAD = @"HEAD";
     NSURL *expectedURL = [NSURL URLWithString:path relativeToURL:_baseURL];
     XCTAssertEqualObjects(request.URL, expectedURL);
     XCTAssertEqualObjects(request.HTTPMethod, MethodPOST);
-    XCTAssertEqualObjects(request.HTTPBody, returnedData);
+    XCTAssertEqualObjects(request.HTTPBody, mockData);
     
     NSDictionary<NSString *, NSString *> *expectedHeaders = @{
                                                               @"User-Agent" : _userAgentString,
@@ -334,6 +331,7 @@ static NSString *const MethodHEAD = @"HEAD";
     XCTAssertEqualObjects(request.allHTTPHeaderFields, expectedHeaders);
     
     [self veriyAllMocks];
+    [serializerMock verify];
 }
 
 - (void)testRequestFactoryCreatePOSTRequestRawDataWithoutMIMETypeSentAsOctetStream
@@ -514,6 +512,7 @@ static NSString *const MethodHEAD = @"HEAD";
     XCTAssertEqualObjects(request.allHTTPHeaderFields, expectedHeaders);
 
     [self veriyAllMocks];
+    [serializerMock verify];
 }
 
 - (void)testRequestFactoryWithDelegateCreatePOSTRequestIncludesParametersOnDefaultJSONSerializer
@@ -598,6 +597,7 @@ static NSString *const MethodHEAD = @"HEAD";
     XCTAssertEqualObjects(request.allHTTPHeaderFields, expectedHeaders);
     
     [self veriyAllMocks];
+    [serializerMock verify];
 }
 
 - (void)testRequestFactoryCreateUnsafeRequestWithoutBody
@@ -711,6 +711,95 @@ static NSString *const MethodHEAD = @"HEAD";
                                                               @"Accept" : @"application/json; charset=utf-8",
                                                               };
     XCTAssertEqualObjects(request.allHTTPHeaderFields, expectedHeaders);
+
+    [self veriyAllMocks];
+}
+
+- (void)testRequestFactoryCreateRequestWithBuilderDataTypes
+{
+    NSString *const path = @"build/a/path";
+    NSString *const contentEncoding = @"test/unit";
+    NSDictionary *const parameters = @{ @"useful" : @"value", @"not useful" : @2 };
+    NSData *const serializedData = [@"not at all useful data" dataUsingEncoding:NSUTF8StringEncoding];
+
+    OCMockObject *serializerMock = [OCMockObject mockForClass:[SEDataSerializer class]];
+    [[[_serviceMock stub] andReturn:serializerMock] explicitSerializerForMIMEType:contentEncoding];
+
+    [[[serializerMock stub] andReturnValue:@YES] shouldAppendCharsetToContentType];
+    [[[serializerMock expect] andReturn:serializedData] serializeObject:parameters mimeType:contentEncoding error:[OCMArg anyObjectRef]];
+
+    SEInternalDataRequestBuilder *requestBuilder = [[SEInternalDataRequestBuilder alloc] initWithDataRequestService:_serviceMock];
+    [requestBuilder POST:path
+                 success:^(id o, NSURLResponse *r){ XCTFail(@"Should never invoke"); }
+                 failure:^(NSError * _Nonnull error) { XCTFail(@"Should never invoke"); }
+         completionQueue:dispatch_get_main_queue()];
+
+    [requestBuilder setAcceptRawData];
+    [requestBuilder setContentEncoding:contentEncoding];
+    [requestBuilder setBodyParameters:parameters];
+
+    SEDataRequestFactory *factory = [[SEDataRequestFactory alloc] initWithService:_serviceMock secure:YES userAgent:_userAgentString requestPreparationDelegate:nil];
+
+    NSError *error = nil;
+    NSURLRequest *request = [factory createRequestWithBuilder:requestBuilder baseURL:_baseURL error:&error];
+
+    XCTAssertNil(error);
+    XCTAssertNotNil(request);
+
+    NSURL *expectedURL = [NSURL URLWithString:path relativeToURL:_baseURL];
+    XCTAssertEqualObjects(request.URL, expectedURL);
+    XCTAssertEqualObjects(request.HTTPMethod, MethodPOST);
+    XCTAssertEqualObjects(request.HTTPBody, serializedData);
+
+    NSString *expectedContentType = [contentEncoding stringByAppendingString:@"; charset=utf-8"];
+    NSDictionary<NSString *, NSString *> *expectedHeaders = @{
+                                                              @"User-Agent" : _userAgentString,
+                                                              @"Content-Type" : expectedContentType,
+                                                          };
+    XCTAssertEqualObjects(request.allHTTPHeaderFields, expectedHeaders);
+
+    [self veriyAllMocks];
+    [serializerMock verify];
+}
+
+- (void)testRequestFactoryCreateRequestWithBuilderRawData
+{
+    NSString *const path = @"build/a/path";
+    NSString *const contentEncoding = @"test/unit";
+    NSData *const serializedData = [@"not at all useful data" dataUsingEncoding:NSUTF8StringEncoding];
+
+    [[_serviceMock reject] explicitSerializerForMIMEType:contentEncoding];
+
+    SEInternalDataRequestBuilder *requestBuilder = [[SEInternalDataRequestBuilder alloc] initWithDataRequestService:_serviceMock];
+    [requestBuilder POST:path
+                 success:^(id o, NSURLResponse *r){ XCTFail(@"Should never invoke"); }
+                 failure:^(NSError * _Nonnull error) { XCTFail(@"Should never invoke"); }
+         completionQueue:dispatch_get_main_queue()];
+
+    [requestBuilder setAcceptRawData];
+    [requestBuilder setContentEncoding:contentEncoding];
+    [requestBuilder setBodyData:serializedData];
+
+    SEDataRequestFactory *factory = [[SEDataRequestFactory alloc] initWithService:_serviceMock secure:YES userAgent:_userAgentString requestPreparationDelegate:nil];
+
+    NSError *error = nil;
+    NSURLRequest *request = [factory createRequestWithBuilder:requestBuilder baseURL:_baseURL error:&error];
+
+    XCTAssertNil(error);
+    XCTAssertNotNil(request);
+
+    NSURL *expectedURL = [NSURL URLWithString:path relativeToURL:_baseURL];
+    XCTAssertEqualObjects(request.URL, expectedURL);
+    XCTAssertEqualObjects(request.HTTPMethod, MethodPOST);
+    XCTAssertEqualObjects(request.HTTPBody, serializedData);
+
+    NSDictionary<NSString *, NSString *> *expectedHeaders = @{
+                                                              @"User-Agent" : _userAgentString,
+                                                              @"Content-Type" : contentEncoding,
+                                                              };
+    XCTAssertEqualObjects(request.allHTTPHeaderFields, expectedHeaders);
+    
+    [self veriyAllMocks];
 }
 
 

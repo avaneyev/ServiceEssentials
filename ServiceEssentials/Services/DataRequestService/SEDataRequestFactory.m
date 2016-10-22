@@ -227,7 +227,7 @@ static inline BOOL SEDataRequestMethodURLEncodesBody(NSString *method)
                                   method:builder.method
                                  baseURL:baseURL
                                     path:builder.path
-                                    body:builder.bodyParameters
+                                    body:builder.bodyParameters ?: builder.body
                                 mimeType:builder.contentEncoding
                                  headers:builder.headers
                        acceptContentType:builder.acceptContentType
@@ -402,7 +402,12 @@ static inline BOOL SEDataRequestMethodURLEncodesBody(NSString *method)
     NSString *contentType = nil;
     BOOL isDictionary = [body isKindOfClass:[NSDictionary class]];
 
-    if (mimeType != nil)
+    if ([body isKindOfClass:[NSData class]])
+    {
+        data = body;
+        contentType = mimeType ?: SEDataRequestServiceContentTypeOctetStream;
+    }
+    else if (mimeType != nil)
     {
         NSError *serializationError = nil;
         SEDataSerializer *serializer = [_service explicitSerializerForMIMEType:mimeType];
@@ -455,11 +460,6 @@ static inline BOOL SEDataRequestMethodURLEncodesBody(NSString *method)
         }
 
         contentType = [NSString stringWithFormat:@"%@; charset=%@", SEDataRequestServiceContentTypeJSON, charset];
-    }
-    else if ([body isKindOfClass:[NSData class]])
-    {
-        data = body;
-        contentType = SEDataRequestServiceContentTypeOctetStream;
     }
     else
     {

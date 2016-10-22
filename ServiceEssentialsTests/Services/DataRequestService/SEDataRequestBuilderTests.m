@@ -138,7 +138,7 @@
     OCMVerifyAll(self.dataRequestServiceMock);
 }
 
-- (void)testAdditionalRequestConfigurationBody
+- (void)testAdditionalRequestConfigurationBodyParameters
 {
     NSString * const path = @"some/my/path";
     
@@ -161,11 +161,44 @@
     XCTAssertEqual(failure, builder.failure);
     XCTAssertEqual(queue, builder.completionQueue);
     XCTAssertEqualObjects(bodyParameters, builder.bodyParameters);
+    XCTAssertNil(builder.body);
     XCTAssertNil(builder.contentEncoding);
     XCTAssertNil(builder.contentParts);
     XCTAssertNil(builder.deserializeClass);
     XCTAssertNil(builder.headers);
     
+    OCMVerifyAll(self.dataRequestServiceMock);
+}
+
+- (void)testAdditionalRequestConfigurationBody
+{
+    NSString * const path = @"some/my/path";
+
+    void (^success)(id data, NSURLResponse *response) = ^(id data, NSURLResponse *response){ };
+    void (^failure)(NSError *error) = ^(NSError *error){ };
+    dispatch_queue_t queue = dispatch_get_main_queue();
+
+    NSData *const body = [@"some data here" dataUsingEncoding:NSUTF8StringEncoding];
+
+    SEInternalDataRequestBuilder *builder = [[SEInternalDataRequestBuilder alloc] initWithDataRequestService:self.dataRequestServiceMock];
+
+    id<SEDataRequestCustomizer> customizer = [builder POST:path success:success failure:failure completionQueue:queue];
+
+    [customizer setBodyData:body];
+
+    XCTAssertNotNil(customizer);
+    XCTAssertEqualObjects(@"POST", builder.method);
+    XCTAssertEqualObjects(path, builder.path);
+    XCTAssertEqual(success, builder.success);
+    XCTAssertEqual(failure, builder.failure);
+    XCTAssertEqual(queue, builder.completionQueue);
+    XCTAssertEqualObjects(body, builder.body);
+    XCTAssertNil(builder.bodyParameters);
+    XCTAssertNil(builder.contentEncoding);
+    XCTAssertNil(builder.contentParts);
+    XCTAssertNil(builder.deserializeClass);
+    XCTAssertNil(builder.headers);
+
     OCMVerifyAll(self.dataRequestServiceMock);
 }
 
