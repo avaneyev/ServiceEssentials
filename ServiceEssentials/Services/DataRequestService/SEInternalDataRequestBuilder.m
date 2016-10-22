@@ -108,7 +108,7 @@
 
 - (void)setContentEncoding:(NSString *)encoding
 {
-    if (_contentParts != nil || [_dataRequestService explicitSerializerForMIMEType:encoding] == nil)
+    if (_contentParts != nil || (_bodyParameters != nil && [_dataRequestService explicitSerializerForMIMEType:encoding] == nil))
     {
         INVALID_BUILDER_PARAM(encoding);
     }
@@ -137,7 +137,7 @@
 
 - (void)setBodyParameters:(NSDictionary<NSString *,id> *)parameters
 {
-    if (_bodyParameters != nil || _body != nil || _contentParts != nil)
+    if (_bodyParameters != nil || _body != nil || _contentParts != nil || (_contentEncoding != nil && [_dataRequestService explicitSerializerForMIMEType:_contentEncoding] == nil))
     {
         THROW_INCONSISTENCY(@{ NSLocalizedDescriptionKey: @"Cannot set body paramters at this stage." });
     }
