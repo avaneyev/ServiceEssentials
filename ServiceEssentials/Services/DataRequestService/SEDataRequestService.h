@@ -95,7 +95,7 @@ typedef enum
 /** Set content encoding for data being sent */
 - (void) setContentEncoding: (nonnull NSString *) encoding;
 /** Sets an HTTP header for the request. Can be called multiple times. */
-- (void) setHTTPHeader: (nonnull NSString *) header forkey: (nonnull NSString *) key;
+- (void) setHTTPHeader: (nonnull NSString *) header forKey: (nonnull NSString *) key;
 /** Sets expected HTTP codes (as an index set). Defaults to 2xx. */
 - (void) setExpectedHTTPCodes: (nonnull NSIndexSet *) expectedCodes;
 

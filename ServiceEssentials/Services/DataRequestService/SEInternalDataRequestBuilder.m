@@ -116,7 +116,7 @@
     _contentEncoding = encoding;
 }
 
-- (void)setHTTPHeader:(NSString *)header forkey:(NSString *)key
+- (void)setHTTPHeader:(NSString *)header forKey:(NSString *)key
 {
     if (header == nil) THROW_INVALID_PARAM(header, nil);
     if (key == nil) THROW_INVALID_PARAM(key, nil);

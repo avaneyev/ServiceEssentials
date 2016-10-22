@@ -802,6 +802,91 @@ static NSString *const MethodHEAD = @"HEAD";
     [self veriyAllMocks];
 }
 
+- (void)testRequestFactoryCreateRequestWithBuilderCustomHeaders
+{
+    NSString *const path = @"build/a/path";
+    NSData *const serializedData = [@"not at all useful data" dataUsingEncoding:NSUTF8StringEncoding];
+
+    [[_serviceMock reject] explicitSerializerForMIMEType:[OCMArg any]];
+
+    SEInternalDataRequestBuilder *requestBuilder = [[SEInternalDataRequestBuilder alloc] initWithDataRequestService:_serviceMock];
+    [requestBuilder POST:path
+                 success:^(id o, NSURLResponse *r){ XCTFail(@"Should never invoke"); }
+                 failure:^(NSError * _Nonnull error) { XCTFail(@"Should never invoke"); }
+         completionQueue:dispatch_get_main_queue()];
+
+    [requestBuilder setBodyData:serializedData];
+    [requestBuilder setHTTPHeader:@"first value" forKey:@"X-First-Header"];
+    [requestBuilder setHTTPHeader:@"second value" forKey:@"X-Second-Header"];
+
+    SEDataRequestFactory *factory = [[SEDataRequestFactory alloc] initWithService:_serviceMock secure:YES userAgent:_userAgentString requestPreparationDelegate:nil];
+
+    NSError *error = nil;
+    NSURLRequest *request = [factory createRequestWithBuilder:requestBuilder baseURL:_baseURL error:&error];
+
+    XCTAssertNil(error);
+    XCTAssertNotNil(request);
+
+    NSURL *expectedURL = [NSURL URLWithString:path relativeToURL:_baseURL];
+    XCTAssertEqualObjects(request.URL, expectedURL);
+    XCTAssertEqualObjects(request.HTTPMethod, MethodPOST);
+    XCTAssertEqualObjects(request.HTTPBody, serializedData);
+
+    NSDictionary<NSString *, NSString *> *expectedHeaders = @{
+                                                              @"User-Agent" : _userAgentString,
+                                                              @"Accept" : @"application/json; charset=utf-8",
+                                                              @"Content-Type" : SEDataRequestServiceContentTypeOctetStream,
+                                                              @"X-First-Header": @"first value",
+                                                              @"X-Second-Header": @"second value"
+                                                              };
+    XCTAssertEqualObjects(request.allHTTPHeaderFields, expectedHeaders);
+
+    [self veriyAllMocks];
+}
+
+- (void)testRequestFactoryCreateRequestWithBuilderCustomHeadersOverwrittenByContent
+{
+    NSString *const path = @"build/a/path";
+    NSData *const serializedData = [@"not at all useful data" dataUsingEncoding:NSUTF8StringEncoding];
+
+    [[_serviceMock reject] explicitSerializerForMIMEType:[OCMArg any]];
+
+    SEInternalDataRequestBuilder *requestBuilder = [[SEInternalDataRequestBuilder alloc] initWithDataRequestService:_serviceMock];
+    [requestBuilder POST:path
+                 success:^(id o, NSURLResponse *r){ XCTFail(@"Should never invoke"); }
+                 failure:^(NSError * _Nonnull error) { XCTFail(@"Should never invoke"); }
+         completionQueue:dispatch_get_main_queue()];
+
+    [requestBuilder setBodyData:serializedData];
+    [requestBuilder setHTTPHeader:@"first value" forKey:@"X-First-Header"];
+    [requestBuilder setHTTPHeader:@"second value" forKey:@"X-Second-Header"];
+    [requestBuilder setHTTPHeader:@"random stuff" forKey:@"Content-Type"];
+
+    SEDataRequestFactory *factory = [[SEDataRequestFactory alloc] initWithService:_serviceMock secure:YES userAgent:_userAgentString requestPreparationDelegate:nil];
+
+    NSError *error = nil;
+    NSURLRequest *request = [factory createRequestWithBuilder:requestBuilder baseURL:_baseURL error:&error];
+
+    XCTAssertNil(error);
+    XCTAssertNotNil(request);
+
+    NSURL *expectedURL = [NSURL URLWithString:path relativeToURL:_baseURL];
+    XCTAssertEqualObjects(request.URL, expectedURL);
+    XCTAssertEqualObjects(request.HTTPMethod, MethodPOST);
+    XCTAssertEqualObjects(request.HTTPBody, serializedData);
+
+    NSDictionary<NSString *, NSString *> *expectedHeaders = @{
+                                                              @"User-Agent" : _userAgentString,
+                                                              @"Accept" : @"application/json; charset=utf-8",
+                                                              @"Content-Type" : SEDataRequestServiceContentTypeOctetStream,
+                                                              @"X-First-Header": @"first value",
+                                                              @"X-Second-Header": @"second value"
+                                                              };
+    XCTAssertEqualObjects(request.allHTTPHeaderFields, expectedHeaders);
+    
+    [self veriyAllMocks];
+}
+
 
 #pragma mark - Request builder - multipart
 

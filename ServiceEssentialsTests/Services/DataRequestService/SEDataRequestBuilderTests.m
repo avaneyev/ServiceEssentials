@@ -315,8 +315,8 @@
     static NSString *const SecondHeaderValue = @"OtherHeaderValue";
 
     id<SEDataRequestCustomizer> customizer = [self createSimpleBuilderAndPost];
-    [customizer setHTTPHeader:FirstHeaderValue forkey:FirstHeader];
-    [customizer setHTTPHeader:SecondHeaderValue forkey:SecondHeader];
+    [customizer setHTTPHeader:FirstHeaderValue forKey:FirstHeader];
+    [customizer setHTTPHeader:SecondHeaderValue forKey:SecondHeader];
     
     SEInternalDataRequestBuilder *builder = (SEInternalDataRequestBuilder *)customizer;
     NSDictionary *headers = builder.headers;
