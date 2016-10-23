@@ -443,6 +443,35 @@ static NSString *const MethodHEAD = @"HEAD";
     [self veriyAllMocks];
 }
 
+- (void)testRequestFactoryWithDelegateCreateGETRequestIncludesAuthorizationHeader
+{
+    NSString *const path = @"yet/another/path";
+    NSDictionary *const requestParameters = @{ @"request" : @"request-value" };
+
+    SEDataRequestFactory *factory = [[SEDataRequestFactory alloc] initWithService:_serviceMock secure:YES userAgent:_userAgentString requestPreparationDelegate:nil];
+    factory.authorizationHeader = @"Token: my-awesome-token";
+
+    NSError *error = nil;
+    NSURLRequest *request = [factory createRequestWithMethod:MethodGET baseURL:_baseURL path:path body:requestParameters mimeType:nil error:&error];
+
+    XCTAssertNil(error);
+    XCTAssertNotNil(request);
+
+    NSURL *expectedURL = [NSURL URLWithString:[NSString stringWithFormat:@"%@?request=request-value", path] relativeToURL:_baseURL];
+    XCTAssertEqualObjects(request.URL, expectedURL);
+    XCTAssertEqualObjects(request.HTTPMethod, MethodGET);
+    XCTAssertNil(request.HTTPBody);
+
+    NSDictionary<NSString *, NSString *> *expectedHeaders = @{
+                                                              @"User-Agent" : _userAgentString,
+                                                              @"Authorization" : @"Token: my-awesome-token",
+                                                              @"Accept" : @"application/json; charset=utf-8",
+                                                              };
+    XCTAssertEqualObjects(request.allHTTPHeaderFields, expectedHeaders);
+
+    [self veriyAllMocks];
+}
+
 - (void)testRequestFactoryWithDelegateCreateGETRequestIncludesParametersAndHeadersThrowOnCollisions
 {
     NSString *const path = @"yet/another/path";
@@ -889,6 +918,49 @@ static NSString *const MethodHEAD = @"HEAD";
 
 
 #pragma mark - Request builder - multipart
+
+- (void)testRequestFactoryCreateRequestWithBuilderMultipartContent
+{
+    NSString *const path = @"build/a/multipart";
+    NSString *const partName = @"partName";
+    NSString *const boundary = @"BoUNdaRy-";
+    NSData *const serializedData = [@"not at all useful data" dataUsingEncoding:NSUTF8StringEncoding];
+
+    SEInternalDataRequestBuilder *requestBuilder = [[SEInternalDataRequestBuilder alloc] initWithDataRequestService:_serviceMock];
+
+    NSError *error = nil;
+    [requestBuilder POST:path
+                 success:^(id o, NSURLResponse *r){ XCTFail(@"Should never invoke"); }
+                 failure:^(NSError * _Nonnull error) { XCTFail(@"Should never invoke"); }
+         completionQueue:dispatch_get_main_queue()];
+
+    BOOL result = [requestBuilder appendPartWithData:serializedData name:partName mimeType:SEDataRequestServiceContentTypePlainText error:&error];
+
+    XCTAssertTrue(result);
+    XCTAssertNil(error);
+
+    SEDataRequestFactory *factory = [[SEDataRequestFactory alloc] initWithService:_serviceMock secure:YES userAgent:_userAgentString requestPreparationDelegate:nil];
+
+    NSURLRequest *request = [factory createMultipartRequestWithBuilder:requestBuilder baseURL:_baseURL boundary:boundary error:&error];
+
+    XCTAssertNil(error);
+    XCTAssertNotNil(request);
+
+    NSURL *expectedURL = [NSURL URLWithString:path relativeToURL:_baseURL];
+    XCTAssertEqualObjects(request.URL, expectedURL);
+    XCTAssertEqualObjects(request.HTTPMethod, MethodPOST);
+    XCTAssertNil(request.HTTPBody);
+
+    NSDictionary<NSString *, NSString *> *expectedHeaders = @{
+                                                              @"User-Agent" : _userAgentString,
+                                                              @"Accept" : @"application/json; charset=utf-8",
+                                                              @"Content-Length" : @"127",
+                                                              @"Content-Type" : @"multipart/form-data; boundary=BoUNdaRy-"
+                                                              };
+    XCTAssertEqualObjects(request.allHTTPHeaderFields, expectedHeaders);
+
+    [self veriyAllMocks];
+}
 
 
 @end

@@ -19,7 +19,7 @@
 - (nonnull instancetype)initWithService:(nonnull id<SEDataRequestServicePrivate>)service secure:(BOOL)secure userAgent:(nonnull NSString *)userAgent requestPreparationDelegate:(nullable id<SEDataRequestPreparationDelegate>)requestDelegate;
 
 @property (nonatomic, readonly, strong, nonnull) NSString *userAgent;
-@property (nonatomic, strong, nullable) NSString *authorizationHeader;
+@property (atomic, strong, nullable) NSString *authorizationHeader;
 
 - (nonnull NSURLRequest *)createRequestWithMethod:(nonnull NSString *)method
                                           baseURL:(nonnull NSURL *)baseURL
