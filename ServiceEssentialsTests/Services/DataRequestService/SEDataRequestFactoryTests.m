@@ -962,5 +962,53 @@ static NSString *const MethodHEAD = @"HEAD";
     [self veriyAllMocks];
 }
 
+- (void)testRequestFactoryCreateRequestWithBuilderMultipartContentAndDelegateProvidedHeaders
+{
+    NSString *const path = @"build/a/multipart";
+    NSString *const partName = @"partName";
+    NSString *const boundary = @"BoUNdaRy-";
+    NSData *const serializedData = [@"not at all useful data" dataUsingEncoding:NSUTF8StringEncoding];
+    NSDictionary *const delegateHeaders = @{ @"X-Mega-Header" : @"my mega value" };
+
+    SEInternalDataRequestBuilder *requestBuilder = [[SEInternalDataRequestBuilder alloc] initWithDataRequestService:_serviceMock];
+
+    NSError *error = nil;
+    [requestBuilder POST:path
+                 success:^(id o, NSURLResponse *r){ XCTFail(@"Should never invoke"); }
+                 failure:^(NSError * _Nonnull error) { XCTFail(@"Should never invoke"); }
+         completionQueue:dispatch_get_main_queue()];
+
+    BOOL result = [requestBuilder appendPartWithData:serializedData name:partName mimeType:SEDataRequestServiceContentTypePlainText error:&error];
+
+    XCTAssertTrue(result);
+    XCTAssertNil(error);
+
+    [[[_preparationDelegateMock expect] andReturn:delegateHeaders] dataRequestService:(id)_serviceMock additionalHeadersForRequestMethod:MethodPOST path:path];
+    [[_preparationDelegateMock reject] dataRequestService:[OCMArg any] additionalParametersForRequestMethod:[OCMArg any] path:[OCMArg any]];
+
+    SEDataRequestFactory *factory = [[SEDataRequestFactory alloc] initWithService:_serviceMock secure:YES userAgent:_userAgentString requestPreparationDelegate:_preparationDelegateMock];
+
+    NSURLRequest *request = [factory createMultipartRequestWithBuilder:requestBuilder baseURL:_baseURL boundary:boundary error:&error];
+
+    XCTAssertNil(error);
+    XCTAssertNotNil(request);
+
+    NSURL *expectedURL = [NSURL URLWithString:path relativeToURL:_baseURL];
+    XCTAssertEqualObjects(request.URL, expectedURL);
+    XCTAssertEqualObjects(request.HTTPMethod, MethodPOST);
+    XCTAssertNil(request.HTTPBody);
+
+    NSDictionary<NSString *, NSString *> *expectedHeaders = @{
+                                                              @"User-Agent" : _userAgentString,
+                                                              @"Accept" : @"application/json; charset=utf-8",
+                                                              @"Content-Length" : @"127",
+                                                              @"Content-Type" : @"multipart/form-data; boundary=BoUNdaRy-",
+                                                              @"X-Mega-Header" : @"my mega value"
+                                                              };
+    XCTAssertEqualObjects(request.allHTTPHeaderFields, expectedHeaders);
+    
+    [self veriyAllMocks];
+}
+
 
 @end
