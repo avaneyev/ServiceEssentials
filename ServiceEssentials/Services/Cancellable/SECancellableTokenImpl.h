@@ -10,7 +10,7 @@
 
 #import <Foundation/Foundation.h>
 
-#import "SECancellableToken.h"
+#import <ServiceEssentials/SECancellableToken.h>
 
 @interface SECancellableTokenImpl : NSObject<SECancellableToken>
 

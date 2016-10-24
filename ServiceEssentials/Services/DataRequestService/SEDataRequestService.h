@@ -13,9 +13,9 @@
 
 @import Foundation;
 
-#import "SEConstants.h"
-#import "SECancellableToken.h"
-#import "SEDataRequestJSONDeserializable.h"
+#import <ServiceEssentials/SEConstants.h>
+#import <ServiceEssentials/SECancellableToken.h>
+#import <ServiceEssentials/SEDataRequestJSONDeserializable.h>
 
 extern NSString * _Nonnull const SEDataRequestServiceChangedReachabilityNotification;
 extern NSString * _Nonnull const SEDataRequestServiceChangedReachabilityStatusKey;
@@ -95,12 +95,15 @@ typedef enum
 /** Set content encoding for data being sent */
 - (void) setContentEncoding: (nonnull NSString *) encoding;
 /** Sets an HTTP header for the request. Can be called multiple times. */
-- (void) setHTTPHeader: (nonnull NSString *) header forkey: (nonnull NSString *) key;
+- (void) setHTTPHeader: (nonnull NSString *) header forKey: (nonnull NSString *) key;
 /** Sets expected HTTP codes (as an index set). Defaults to 2xx. */
 - (void) setExpectedHTTPCodes: (nonnull NSIndexSet *) expectedCodes;
 
-/** Set the request body parameters. Cannot be combined with multipart. */
+/** Set the request body parameters. Cannot be combined with data or multipart. */
 - (void) setBodyParameters: (nonnull NSDictionary<NSString *, id> *) parameters;
+
+/** Set the request body as raw data. Cannot be combined with parameters or multipart. */
+- (void) setBodyData:(nonnull NSData *) data;
 
 /** Request can be sent while application is in the background */
 - (void) setCanSendInBackground:(BOOL)canSendInBackground;

@@ -9,7 +9,7 @@
 //
 
 #import <Foundation/Foundation.h>
-#import "SEFetchParameters.h"
+#import <ServiceEssentials/SEFetchParameters.h>
 
 @class NSManagedObjectContext;
 @class NSManagedObjectModel;

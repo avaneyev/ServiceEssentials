@@ -8,8 +8,8 @@
 //  Distributed under BSD license. See LICENSE for details.
 //
 
-#import "SENetworkReachabilityTracker.h"
-#import "SETools.h"
+#import <ServiceEssentials/SENetworkReachabilityTracker.h>
+#import <ServiceEssentials/SETools.h>
 
 // Remove the header to disable the notifications.
 @import SystemConfiguration;

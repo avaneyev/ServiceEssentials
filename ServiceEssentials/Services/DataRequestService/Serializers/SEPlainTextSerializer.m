@@ -8,8 +8,8 @@
 //  Distributed under BSD license. See LICENSE for details.
 //
 
-#import "SEPlainTextSerializer.h"
-#import "SEDataRequestService.h"
+#import <ServiceEssentials/SEPlainTextSerializer.h>
+#import <ServiceEssentials/SEDataRequestService.h>
 
 @implementation SEPlainTextSerializer
 
@@ -31,6 +31,11 @@
     NSString *string = object;
     if (error) *error = nil;
     return [string dataUsingEncoding:encoding];
+}
+
+- (BOOL)shouldAppendCharsetToContentType
+{
+    return YES;
 }
 
 - (id)deserializeData:(NSData *)data mimeType:(NSString *)mimeType error:(NSError *__autoreleasing *)error

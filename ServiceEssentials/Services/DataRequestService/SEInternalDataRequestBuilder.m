@@ -8,7 +8,7 @@
 //  Distributed under BSD license. See LICENSE for details.
 //
 
-#import "SEInternalDataRequestBuilder.h"
+#import <ServiceEssentials/SEInternalDataRequestBuilder.h>
 
 #import "SETools.h"
 #import "SEMultipartRequestContentPart.h"
@@ -108,7 +108,7 @@
 
 - (void)setContentEncoding:(NSString *)encoding
 {
-    if (_contentParts != nil || [_dataRequestService explicitSerializerForMIMEType:encoding] == nil)
+    if (_contentParts != nil || (_bodyParameters != nil && [_dataRequestService explicitSerializerForMIMEType:encoding] == nil))
     {
         INVALID_BUILDER_PARAM(encoding);
     }
@@ -116,7 +116,7 @@
     _contentEncoding = encoding;
 }
 
-- (void)setHTTPHeader:(NSString *)header forkey:(NSString *)key
+- (void)setHTTPHeader:(NSString *)header forKey:(NSString *)key
 {
     if (header == nil) THROW_INVALID_PARAM(header, nil);
     if (key == nil) THROW_INVALID_PARAM(key, nil);
@@ -137,12 +137,22 @@
 
 - (void)setBodyParameters:(NSDictionary<NSString *,id> *)parameters
 {
-    if (_bodyParameters != nil || _contentParts != nil)
+    if (_bodyParameters != nil || _body != nil || _contentParts != nil || (_contentEncoding != nil && [_dataRequestService explicitSerializerForMIMEType:_contentEncoding] == nil))
     {
         THROW_INCONSISTENCY(@{ NSLocalizedDescriptionKey: @"Cannot set body paramters at this stage." });
     }
 
     _bodyParameters = [parameters copy];
+}
+
+- (void)setBodyData:(NSData *)data
+{
+    if (_bodyParameters != nil || _body != nil || _contentParts != nil)
+    {
+        THROW_INCONSISTENCY(@{ NSLocalizedDescriptionKey: @"Cannot set body at this stage." });
+    }
+
+    _body = [data copy];
 }
 
 - (void)setCanSendInBackground:(BOOL)canSendInBackground
@@ -152,7 +162,7 @@
 
 - (BOOL)checkMultipartRequestPossibleOrError: (NSError * _Nullable __autoreleasing *)error
 {
-    if (_bodyParameters != nil || _contentEncoding != nil)
+    if (_bodyParameters != nil || _body != nil || _contentEncoding != nil)
     {
         NSDictionary *info = @{ NSLocalizedDescriptionKey: @"Cannot add multipart content to a request that has body or custom content type." };
         if (error != nil) *error = [NSError errorWithDomain:SEErrorDomain code:SEDataRequestServiceRequestBuilderFailure userInfo:info];

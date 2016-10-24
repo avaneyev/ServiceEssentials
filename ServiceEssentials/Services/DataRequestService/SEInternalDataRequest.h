@@ -9,7 +9,7 @@
 //
 
 @import Foundation;
-#import "SEDataRequestService.h"
+#import <ServiceEssentials/SEDataRequestService.h>
 
 @protocol SEDataRequestServicePrivate;
 @protocol SECancellableToken;

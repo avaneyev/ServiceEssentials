@@ -6,9 +6,9 @@
 //  Copyright (c) 2015 AlphaNgen. All rights reserved.
 //
 
-#import "SEWebFormSerializer.h"
+#import <ServiceEssentials/SEWebFormSerializer.h>
 
-#import "SEDataRequestService.h"
+#import <ServiceEssentials/SEDataRequestService.h>
 
 static inline NSString * PercentEscapedQueryString(NSString *string, CFStringRef exceptCharacters, NSStringEncoding encoding)
 {
@@ -43,6 +43,11 @@ static inline void AppendQueryComponent(NSMutableString *mutableString, NSString
 #pragma mark - Public interface
 
 - (BOOL)supportsAdditionalParameters
+{
+    return YES;
+}
+
+- (BOOL)shouldAppendCharsetToContentType
 {
     return YES;
 }

@@ -8,17 +8,17 @@
 //  Distributed under BSD license. See LICENSE for details.
 //
 
-#import "SEDataRequestFactory.h"
+#import <ServiceEssentials/SEDataRequestFactory.h>
 
 #include <pthread.h>
 
-#import "SEDataRequestServicePrivate.h"
-#import "SEDataSerializer.h"
-#import "SEJSONDataSerializer.h"
-#import "SEInternalDataRequestBuilder.h"
-#import "SEMultipartRequestContentStream.h"
-#import "SETools.h"
-#import "SEWebFormSerializer.h"
+#import <ServiceEssentials/SEDataRequestServicePrivate.h>
+#import <ServiceEssentials/SEDataSerializer.h>
+#import <ServiceEssentials/SEJSONDataSerializer.h>
+#import <ServiceEssentials/SEInternalDataRequestBuilder.h>
+#import <ServiceEssentials/SEMultipartRequestContentStream.h>
+#import <ServiceEssentials/SETools.h>
+#import <ServiceEssentials/SEWebFormSerializer.h>
 
 #define CHECK_IF_SECURE do { if (!_isSecure) THROW_NOT_IMPLEMENTED((@{ NSLocalizedDescriptionKey: [NSString stringWithFormat:@"%@ is not implemented for non-secure request factory", NSStringFromSelector(_cmd)] })); } while(0)
 
@@ -227,7 +227,7 @@ static inline BOOL SEDataRequestMethodURLEncodesBody(NSString *method)
                                   method:builder.method
                                  baseURL:baseURL
                                     path:builder.path
-                                    body:builder.bodyParameters
+                                    body:builder.bodyParameters ?: builder.body
                                 mimeType:builder.contentEncoding
                                  headers:builder.headers
                        acceptContentType:builder.acceptContentType
@@ -402,33 +402,48 @@ static inline BOOL SEDataRequestMethodURLEncodesBody(NSString *method)
     NSString *contentType = nil;
     BOOL isDictionary = [body isKindOfClass:[NSDictionary class]];
 
-    if (mimeType != nil)
+    if ([body isKindOfClass:[NSData class]])
+    {
+        data = body;
+        contentType = mimeType ?: SEDataRequestServiceContentTypeOctetStream;
+    }
+    else if (mimeType != nil)
     {
         NSError *serializationError = nil;
         SEDataSerializer *serializer = [_service explicitSerializerForMIMEType:mimeType];
         if (serializer == nil)
         {
-            NSString *message = [NSString stringWithFormat:@"Serializer not found for type %@", mimeType];
-            return SEDataRequestAssignErrorFromMessage(message, error);
+            if ([body isKindOfClass:[NSData class]])
+            {
+                data = body;
+                contentType = mimeType;
+            }
+            else
+            {
+                NSString *message = [NSString stringWithFormat:@"Serializer not found for type %@", mimeType];
+                return SEDataRequestAssignErrorFromMessage(message, error);
+            }
         }
-        
-        if (_isSecure && _requestDelegate && isDictionary && serializer.supportsAdditionalParameters)
+        else
         {
-            body = SEDataRequestDictionaryWithAdditionalParameters(body, service, _requestDelegate, method, path);
+            if (_isSecure && _requestDelegate && isDictionary && serializer.supportsAdditionalParameters)
+            {
+                body = SEDataRequestDictionaryWithAdditionalParameters(body, service, _requestDelegate, method, path);
+            }
+            
+            data = [serializer serializeObject:body mimeType:mimeType error:&serializationError];
+            if (serializationError != nil)
+            {
+                return SEDataRequestAssignSerializationError(serializationError, error);
+            }
+            contentType = serializer.shouldAppendCharsetToContentType ? [NSString stringWithFormat:@"%@; charset=%@", mimeType, charset] : mimeType;
         }
-        
-        data = [serializer serializeObject:body mimeType:mimeType error:&serializationError];
-        if (serializationError != nil)
-        {
-            return SEDataRequestAssignSerializationError(serializationError, error);
-        }
-        contentType = [NSString stringWithFormat:@"%@; charset=%@", mimeType, charset];
     }
     else if ([body isKindOfClass:[NSString class]])
     {
         NSString *text = body;
         data = [text dataUsingEncoding:[_service stringEncoding]];
-        contentType = [NSString stringWithFormat:@"text/plain; charset=%@", charset];
+        contentType = [NSString stringWithFormat:@"%@; charset=%@", SEDataRequestServiceContentTypePlainText, charset];
     }
     else if (isDictionary || [body isKindOfClass:[NSArray class]] || [body isKindOfClass:[NSNumber class]])
     {
@@ -444,7 +459,7 @@ static inline BOOL SEDataRequestMethodURLEncodesBody(NSString *method)
             return SEDataRequestAssignSerializationError(jsonError, error);
         }
 
-        contentType = [NSString stringWithFormat:@"application/json; charset=%@", charset];
+        contentType = [NSString stringWithFormat:@"%@; charset=%@", SEDataRequestServiceContentTypeJSON, charset];
     }
     else
     {

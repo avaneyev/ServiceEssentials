@@ -8,7 +8,7 @@
 //  Distributed under BSD license. See LICENSE for details.
 //
 
-#import "SEDataSerializer.h"
+#import <ServiceEssentials/SEDataSerializer.h>
 
 @interface SEWebFormSerializer : SEDataSerializer
 

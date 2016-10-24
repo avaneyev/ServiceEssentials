@@ -138,7 +138,7 @@
     OCMVerifyAll(self.dataRequestServiceMock);
 }
 
-- (void)testAdditionalRequestConfigurationBody
+- (void)testAdditionalRequestConfigurationBodyParameters
 {
     NSString * const path = @"some/my/path";
     
@@ -161,6 +161,7 @@
     XCTAssertEqual(failure, builder.failure);
     XCTAssertEqual(queue, builder.completionQueue);
     XCTAssertEqualObjects(bodyParameters, builder.bodyParameters);
+    XCTAssertNil(builder.body);
     XCTAssertNil(builder.contentEncoding);
     XCTAssertNil(builder.contentParts);
     XCTAssertNil(builder.deserializeClass);
@@ -169,18 +170,67 @@
     OCMVerifyAll(self.dataRequestServiceMock);
 }
 
+- (void)testAdditionalRequestConfigurationBody
+{
+    NSString * const path = @"some/my/path";
+
+    void (^success)(id data, NSURLResponse *response) = ^(id data, NSURLResponse *response){ };
+    void (^failure)(NSError *error) = ^(NSError *error){ };
+    dispatch_queue_t queue = dispatch_get_main_queue();
+
+    NSData *const body = [@"some data here" dataUsingEncoding:NSUTF8StringEncoding];
+
+    SEInternalDataRequestBuilder *builder = [[SEInternalDataRequestBuilder alloc] initWithDataRequestService:self.dataRequestServiceMock];
+
+    id<SEDataRequestCustomizer> customizer = [builder POST:path success:success failure:failure completionQueue:queue];
+
+    [customizer setBodyData:body];
+
+    XCTAssertNotNil(customizer);
+    XCTAssertEqualObjects(@"POST", builder.method);
+    XCTAssertEqualObjects(path, builder.path);
+    XCTAssertEqual(success, builder.success);
+    XCTAssertEqual(failure, builder.failure);
+    XCTAssertEqual(queue, builder.completionQueue);
+    XCTAssertEqualObjects(body, builder.body);
+    XCTAssertNil(builder.bodyParameters);
+    XCTAssertNil(builder.contentEncoding);
+    XCTAssertNil(builder.contentParts);
+    XCTAssertNil(builder.deserializeClass);
+    XCTAssertNil(builder.headers);
+
+    OCMVerifyAll(self.dataRequestServiceMock);
+}
+
 - (void)testAdditionalRequestConfigurationContentType
 {
     NSString *const contentEncoding = @"my-encoding";
-    id serializer = [NSObject new];
-    
+
     id<SEDataRequestCustomizer> customizer = [self createSimpleBuilderAndPost];
-    OCMExpect([self.dataRequestServiceMock explicitSerializerForMIMEType:contentEncoding]).andReturn(serializer);
+    OCMReject([self.dataRequestServiceMock explicitSerializerForMIMEType:contentEncoding]);
     
     [customizer setContentEncoding:contentEncoding];
     
     SEInternalDataRequestBuilder *builder = (SEInternalDataRequestBuilder *)customizer;
     XCTAssertEqualObjects(contentEncoding, builder.contentEncoding);
+    OCMVerifyAll(self.dataRequestServiceMock);
+}
+
+- (void)testAdditionalRequestConfigurationContentTypeAndBodyParameters
+{
+    NSString *const contentEncoding = @"my-encoding";
+    NSDictionary *const parameters = @{ @"param" : @"value" };
+    id serializer = [NSObject new];
+
+    id<SEDataRequestCustomizer> customizer = [self createSimpleBuilderAndPost];
+    OCMExpect([self.dataRequestServiceMock explicitSerializerForMIMEType:contentEncoding]).andReturn(serializer);
+
+    [customizer setBodyParameters:parameters];
+    [customizer setContentEncoding:contentEncoding];
+
+    SEInternalDataRequestBuilder *builder = (SEInternalDataRequestBuilder *)customizer;
+    XCTAssertEqualObjects(contentEncoding, builder.contentEncoding);
+    XCTAssertEqualObjects(parameters, builder.bodyParameters);
     OCMVerifyAll(self.dataRequestServiceMock);
 }
 
@@ -190,10 +240,47 @@
     NSString *const contentEncoding = @"unsupported-encoding";
     
     OCMExpect([self.dataRequestServiceMock explicitSerializerForMIMEType:contentEncoding]).andReturn(nil);
+    [customizer setBodyParameters:@{ @"param" : @"value" }];
     XCTAssertThrows([customizer setContentEncoding:contentEncoding]);
     
     OCMVerifyAll(self.dataRequestServiceMock);
 }
+
+- (void)testAdditionalRequestConfigurationContentTypeAndRawBody
+{
+    NSString *const contentEncoding = @"my-encoding";
+    id serializer = [NSObject new];
+    NSData *const data = [@"yay data" dataUsingEncoding:NSUTF8StringEncoding];
+
+    id<SEDataRequestCustomizer> customizer = [self createSimpleBuilderAndPost];
+    OCMReject([self.dataRequestServiceMock explicitSerializerForMIMEType:contentEncoding]).andReturn(serializer);
+
+    [customizer setBodyData:data];
+    [customizer setContentEncoding:contentEncoding];
+
+    SEInternalDataRequestBuilder *builder = (SEInternalDataRequestBuilder *)customizer;
+    XCTAssertEqualObjects(contentEncoding, builder.contentEncoding);
+    XCTAssertEqualObjects(data, builder.body);
+    OCMVerifyAll(self.dataRequestServiceMock);
+}
+
+- (void)testAdditionalRequestConfigurationUnsupportedContentTypeDoesNotMatterForRawData
+{
+    id<SEDataRequestCustomizer> customizer = [self createSimpleBuilderAndPost];
+    NSData *const data = [@"yay data" dataUsingEncoding:NSUTF8StringEncoding];
+    NSString *const contentEncoding = @"unsupported-encoding";
+
+    OCMReject([self.dataRequestServiceMock explicitSerializerForMIMEType:contentEncoding]);
+    [customizer setBodyData:data];
+    XCTAssertNoThrow([customizer setContentEncoding:contentEncoding]);
+
+    SEInternalDataRequestBuilder *builder = (SEInternalDataRequestBuilder *)customizer;
+    XCTAssertEqualObjects(contentEncoding, builder.contentEncoding);
+    XCTAssertEqualObjects(data, builder.body);
+
+    OCMVerifyAll(self.dataRequestServiceMock);
+}
+
 
 - (void)testAdditionalRequestConfigurationValidDeserializationClass
 {
@@ -228,8 +315,8 @@
     static NSString *const SecondHeaderValue = @"OtherHeaderValue";
 
     id<SEDataRequestCustomizer> customizer = [self createSimpleBuilderAndPost];
-    [customizer setHTTPHeader:FirstHeaderValue forkey:FirstHeader];
-    [customizer setHTTPHeader:SecondHeaderValue forkey:SecondHeader];
+    [customizer setHTTPHeader:FirstHeaderValue forKey:FirstHeader];
+    [customizer setHTTPHeader:SecondHeaderValue forKey:SecondHeader];
     
     SEInternalDataRequestBuilder *builder = (SEInternalDataRequestBuilder *)customizer;
     NSDictionary *headers = builder.headers;

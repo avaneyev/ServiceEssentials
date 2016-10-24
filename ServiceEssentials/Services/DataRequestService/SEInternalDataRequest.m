@@ -8,17 +8,17 @@
 //  Distributed under BSD license. See LICENSE for details.
 //
 
-#import "SEInternalDataRequest.h"
+#import <ServiceEssentials/SEInternalDataRequest.h>
 
 #include <objc/runtime.h>
 #include <libkern/OSAtomic.h>
 
-#import "SETools.h"
-#import "SEDataRequestService.h"
-#import "SEDataRequestServicePrivate.h"
-#import "SEDataSerializer.h"
-#import "SECancellableTokenImpl.h"
-#import "SEMultipartRequestContentStream.h"
+#import <ServiceEssentials/SETools.h>
+#import <ServiceEssentials/SEDataRequestService.h>
+#import <ServiceEssentials/SEDataRequestServicePrivate.h>
+#import <ServiceEssentials/SEDataSerializer.h>
+#import <ServiceEssentials/SECancellableTokenImpl.h>
+#import <ServiceEssentials/SEMultipartRequestContentStream.h>
 
 #define COMPLETED_REQUEST_BIT       0 // signals that request has been completed
 #define CANCELLED_REQUEST_BIT       1 // signals that request has been cancelled, this bit will also be set by completed callback

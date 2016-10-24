@@ -8,7 +8,7 @@
 //  Distributed under BSD license. See LICENSE for details.
 //
 
-#import "SECancellableTokenImpl.h"
+#import <ServiceEssentials/SECancellableTokenImpl.h>
 
 @implementation SECancellableTokenImpl
 {
